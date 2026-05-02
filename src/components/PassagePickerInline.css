@@ -1,0 +1,109 @@
+.picker-inline {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 20px;
+}
+
+.picker-nav {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 20px;
+  min-height: 30px;
+}
+
+.text-link {
+  color: var(--accent-gold);
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  font-weight: 800;
+  letter-spacing: 1px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.picker-current-step {
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  letter-spacing: 2px;
+  font-weight: 800;
+}
+
+.picker-scroll-area {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 5px;
+}
+
+.book-grid-container {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.testament-label {
+  font-size: 0.55rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  font-weight: 700;
+  margin-bottom: 5px;
+}
+
+.testament-separator {
+  height: 1px;
+  background: var(--accent-soft);
+  margin: 10px 0;
+  opacity: 0.5;
+}
+
+.inline-grid {
+  display: grid;
+  gap: 6px;
+}
+
+.inline-grid.books {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.inline-grid.numbers {
+  grid-template-columns: repeat(5, 1fr);
+}
+
+.inline-item {
+  padding: 8px 4px;
+  background: var(--bg-deep);
+  border: 1px solid var(--accent-soft);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 0.65rem;
+  text-align: center;
+  transition: var(--transition-smooth);
+  font-weight: 600;
+}
+
+.inline-item.abbr {
+  letter-spacing: 0.5px;
+}
+
+.inline-item:hover {
+  border-color: var(--accent-gold);
+  color: var(--accent-gold);
+}
+
+.inline-item.active {
+  background: var(--accent-gold);
+  color: var(--bg-deep);
+  border-color: var(--accent-gold);
+}
+
+.inline-item.all {
+  grid-column: span 5;
+  text-transform: uppercase;
+  font-weight: 800;
+  font-size: 0.6rem;
+  letter-spacing: 1px;
+}

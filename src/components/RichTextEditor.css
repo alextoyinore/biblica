@@ -1,0 +1,64 @@
+.quill-editor-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: transparent;
+}
+
+/* Base Quill Overrides */
+.ql-toolbar.ql-snow {
+  border: none;
+  border-bottom: 1px solid var(--accent-soft);
+  padding: 8px 0;
+  margin-bottom: 15px;
+}
+
+.ql-container.ql-snow {
+  border: none;
+  font-family: var(--font-main);
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+.ql-editor {
+  padding: 0;
+  line-height: 1.7;
+}
+
+.ql-editor.ql-blank::before {
+  left: 0;
+  color: var(--text-muted);
+  font-style: italic;
+  opacity: 0.5;
+}
+
+/* Icon Colors */
+.ql-snow .ql-stroke {
+  stroke: var(--text-secondary);
+}
+
+.ql-snow .ql-fill {
+  fill: var(--text-secondary);
+}
+
+.ql-snow .ql-picker {
+  color: var(--text-secondary);
+}
+
+.ql-snow.ql-toolbar button:hover .ql-stroke,
+.ql-snow.ql-toolbar button:hover .ql-fill,
+.ql-snow.ql-toolbar button.ql-active .ql-stroke,
+.ql-snow.ql-toolbar button.ql-active .ql-fill {
+  stroke: var(--accent-gold);
+  fill: var(--accent-gold);
+}
+
+/* Theme specific adjustments for Quill */
+[data-theme='modern-sacred'] .ql-snow .ql-stroke { stroke: #a1a1a6; }
+[data-theme='modern-sacred'] .ql-editor { color: #f5f5f7; }
+
+[data-theme='sepia'] .ql-snow .ql-stroke { stroke: #5f4b32; }
+[data-theme='sepia'] .ql-editor { color: #433422; }
+
+[data-theme='light'] .ql-snow .ql-stroke { stroke: #4b4b4b; }
+[data-theme='light'] .ql-editor { color: #111111; }

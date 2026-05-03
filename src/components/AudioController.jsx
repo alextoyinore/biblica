@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, forwardRef, useImperativeHandle } from 'react';
 import './AudioController.css';
+import { BOOK_TO_ID, API_BIBLE_ID_MAP } from '../constants/bible';
 
 // --- Procedural Ambient Sound Engine (Web Audio API) ---
 class AmbientEngine {
@@ -128,13 +129,14 @@ const AMBIENT_SOUNDS = [
   { id: 'forest', name: 'Forest' },
 ];
 
-const AudioController = forwardRef(({ scripture, ambientVolume = 0.4 }, ref) => {
+const AudioController = forwardRef(({ scripture, ambientVolume = 0.4, apiKey }, ref) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isAmbientPlaying, setIsAmbientPlaying] = useState(false);
   const [ambientSound, setAmbientSound] = useState(AMBIENT_SOUNDS[0]);
   const [speed, setSpeed] = useState(0.9);
+  const [isBuffering, setIsBuffering] = useState(false);
   const engineRef = useRef(new AmbientEngine());
-  const synth = window.speechSynthesis;
+  const audioNodeRef = useRef(new Audio());
 
   // Expose togglePlay to parent components
   useImperativeHandle(ref, () => ({
@@ -150,43 +152,106 @@ const AudioController = forwardRef(({ scripture, ambientVolume = 0.4 }, ref) => 
     }
   }, [ambientVolume, isAmbientPlaying]);
 
-  const speak = useCallback(() => {
-    if (!scripture) return;
+  // Update playback speed if it changes while playing
+  useEffect(() => {
+    audioNodeRef.current.playbackRate = speed;
+  }, [speed]);
 
-    const textToRead = scripture.verses
-      .map(v => `Verse ${v.verse}. ${v.text}`)
-      .join(' ');
-
-    const utterance = new SpeechSynthesisUtterance(textToRead);
-    utterance.rate = speed;
-    utterance.lang = 'en-US';
-
-    // Try to find an English voice; Electron falls back to system default if none found
-    const voices = synth.getVoices();
-    const enVoice = voices.find(v => v.lang.startsWith('en'));
-    if (enVoice) utterance.voice = enVoice;
-
-    utterance.onend = () => setIsPlaying(false);
-    utterance.onerror = (e) => {
-      console.error('TTS error:', e.error);
-      setIsPlaying(false);
+  useEffect(() => {
+    const audio = audioNodeRef.current;
+    const handleEnded = () => setIsPlaying(false);
+    const handlePause = () => setIsPlaying(false);
+    const handlePlay = () => {
+      setIsPlaying(true);
+      setIsBuffering(false);
     };
+    const handleWaiting = () => setIsBuffering(true);
+    const handleCanPlay = () => setIsBuffering(false);
+    const handleError = () => {
+      setIsPlaying(false);
+      setIsBuffering(false);
+    };
+    
+    audio.addEventListener('ended', handleEnded);
+    audio.addEventListener('pause', handlePause);
+    audio.addEventListener('play', handlePlay);
+    audio.addEventListener('waiting', handleWaiting);
+    audio.addEventListener('canplay', handleCanPlay);
+    audio.addEventListener('error', handleError);
+    
+    return () => {
+      audio.removeEventListener('ended', handleEnded);
+      audio.removeEventListener('pause', handlePause);
+      audio.removeEventListener('play', handlePlay);
+      audio.removeEventListener('waiting', handleWaiting);
+      audio.removeEventListener('canplay', handleCanPlay);
+      audio.removeEventListener('error', handleError);
+    };
+  }, []);
 
-    synth.cancel();
-    // 100ms — Electron needs a full tick after cancel() before a new speak() is accepted
-    setTimeout(() => synth.speak(utterance), 100);
-  }, [scripture, speed, synth]);
-
-  const handleTogglePlay = () => {
+  const handleTogglePlay = async () => {
     if (isPlaying) {
-      synth.cancel();
+      audioNodeRef.current.pause();
       setIsPlaying(false);
       return;
     }
-    if (!scripture) return;
-    synth.resume(); // Unblock if paused/suspended
-    speak();
-    setIsPlaying(true);
+    
+    if (!scripture || !scripture.verses || scripture.verses.length === 0) return;
+    
+    setIsBuffering(true);
+    const bookName = scripture.verses[0].book_name;
+    const chapter = scripture.verses[0].chapter;
+    
+    let url = '';
+    
+    // 1. Try to get Premium Audio from API.Bible
+    if (apiKey) {
+      try {
+        const translation = scripture.translation_name.toLowerCase();
+        // Simple mapping: find the translation ID (niv, nlt, csb)
+        const transId = Object.keys(API_BIBLE_ID_MAP).find(k => scripture.translation_name.toLowerCase().includes(k));
+        const bibleId = API_BIBLE_ID_MAP[transId];
+        const bookId = BOOK_TO_ID[bookName];
+        const chapterId = `${bookId}.${chapter}`;
+
+        if (bibleId && bookId) {
+          const response = await fetch(`https://rest.api.bible/v1/bibles/${bibleId}/chapters/${chapterId}/audio`, {
+            headers: { 'api-key': apiKey }
+          });
+          if (response.ok) {
+            const data = await response.json();
+            // api.bible returns an HTML snippet with a player or a direct URL depending on the plan.
+            // Usually, for developers, it returns an 'expires' URL or similar.
+            if (data.data && data.data.resourceUrl) {
+              url = data.data.resourceUrl;
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Premium audio fetch failed:', err);
+      }
+    }
+
+    if (!url) {
+      setIsBuffering(false);
+      setIsPlaying(false);
+      console.warn('No audio URL found for this translation.');
+      return;
+    }
+    
+    if (audioNodeRef.current.src !== url) {
+      audioNodeRef.current.src = url;
+      audioNodeRef.current.playbackRate = speed;
+    }
+    
+    try {
+      await audioNodeRef.current.play();
+      setIsPlaying(true);
+    } catch (e) {
+      console.warn('Audio stream failed or blocked.', e);
+      setIsBuffering(false);
+      setIsPlaying(false);
+    }
   };
 
   const handleToggleAmbient = () => {
@@ -211,7 +276,8 @@ const AudioController = forwardRef(({ scripture, ambientVolume = 0.4 }, ref) => 
 
   useEffect(() => {
     return () => {
-      synth.cancel();
+      audioNodeRef.current.pause();
+      audioNodeRef.current.src = '';
       engineRef.current.stop();
     };
   }, []);
@@ -227,7 +293,9 @@ const AudioController = forwardRef(({ scripture, ambientVolume = 0.4 }, ref) => 
           {isPlaying ? '⏸' : '▶'}
         </button>
         <div className="player-info">
-          <span className="player-label">{isPlaying ? 'READING WORD' : 'AUDIO OFF'}</span>
+          <span className={`player-label ${isBuffering ? 'buffering' : ''}`}>
+            {isBuffering ? 'BUFFERING...' : (isPlaying ? 'READING WORD' : 'AUDIO OFF')}
+          </span>
           <div className="speed-control">
             <button onClick={() => setSpeed(s => Math.max(0.5, parseFloat((s - 0.1).toFixed(1))))}>−</button>
             <span>{speed.toFixed(1)}x</span>

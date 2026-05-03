@@ -21,7 +21,7 @@
 }
 
 .ql-editor {
-  padding: 0px 20px;
+  padding: 0px 10px;
   line-height: 1.7;
 }
 
@@ -76,4 +76,72 @@
 
 [data-theme='light'] .ql-editor {
   color: #111111;
+}
+
+/* Bible Link Flyout */
+.ql-editor a[href^="#bible:"] {
+  color: var(--accent-gold);
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  cursor: pointer;
+}
+
+.passage-flyout {
+  position: fixed;
+  background: var(--bg-surface);
+  border: 1px solid var(--accent-soft);
+  border-radius: 12px;
+  padding: 16px;
+  width: 300px;
+  max-height: 250px;
+  overflow-y: auto;
+  box-shadow: none;
+  z-index: 10000;
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+  animation: flyIn 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+[data-theme='modern-sacred'] .passage-flyout {
+  background: rgba(18, 18, 20, 0.92);
+}
+
+[data-theme='sepia'] .passage-flyout {
+  background: rgba(253, 246, 227, 0.95);
+}
+
+[data-theme='light'] .passage-flyout {
+  background: rgba(255, 255, 255, 0.95);
+}
+
+@keyframes flyIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.passage-flyout h4 {
+  margin: 0 0 8px 0;
+  color: var(--accent-gold);
+  font-size: 0.85rem;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.passage-flyout p {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--text-primary);
+}
+
+.passage-flyout .loading {
+  font-size: 0.8rem;
+  color: var(--text-muted);
 }

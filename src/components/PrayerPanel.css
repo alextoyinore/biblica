@@ -1,5 +1,5 @@
 .prayer-overlay {
-  position: fixed;
+  position: absolute;
   top: var(--header-h);
   left: 0;
   right: 0;

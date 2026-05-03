@@ -15,9 +15,19 @@ import bibleData from './data/bible-meta.json';
 
 const TRANSLATIONS = [
   { id: 'kjv', name: 'King James Version' },
+  { id: 'yor', name: 'Yoruba Bible' },
   { id: 'asv', name: 'American Standard Version' },
   { id: 'web', name: 'World English Bible' },
-  { id: 'bbe', name: 'Bible in Basic English' }
+  { id: 'bbe', name: 'Bible in Basic English' },
+  { id: 'darby', name: 'Darby Bible' },
+  { id: 'dra', name: 'Douay-Rheims' },
+  { id: 'ylt', name: 'Young\'s Literal' },
+  { id: 'oeb-us', name: 'Open English Bible' },
+  { id: 'almeida', name: 'Almeida (Portuguese)' },
+  { id: 'synodal', name: 'Synodal (Russian)' },
+  { id: 'cuv', name: 'Chinese Union Version' },
+  { id: 'rccv', name: 'Cornilescu (Romanian)' },
+  { id: 'cherokee', name: 'Cherokee NT' }
 ];
 
 const HIGHLIGHT_COLORS = [
@@ -181,7 +191,7 @@ const App = () => {
         const cacheId = `${t}_${passage.book}_${passage.chapter}`;
         const cached = await DB.getScripture(cacheId);
         if (cached) return cached;
-        const data = await fetchPassage(passage.book, passage.chapter, null, t);
+        const data = await fetchPassage(passage.book, passage.chapter, null, t, settings.audioApiKey);
         await DB.saveScripture(cacheId, data);
         return data;
       };
@@ -288,10 +298,21 @@ const App = () => {
     setActiveVerseMenu(null);
   };
 
-  const updateNote = async (verseNumber, text) => {
+  const updateNote = async (verseNumber, text, title = '') => {
     const noteKey = `${passage.book}_${passage.chapter}_${verseNumber}`;
-    setNotes(prev => ({ ...prev, [noteKey]: text }));
-    await DB.saveNote(noteKey, text);
+    const existing = notes[noteKey] || {};
+    const updatedNote = { ...existing, content: text, title: title || existing.title || '' };
+    setNotes(prev => ({ ...prev, [noteKey]: updatedNote }));
+    await DB.saveNote(noteKey, updatedNote.content, updatedNote.title);
+  };
+
+  const deleteNote = async (noteId) => {
+    setNotes(prev => {
+      const next = { ...prev };
+      delete next[noteId];
+      return next;
+    });
+    await DB.deleteNote(noteId);
   };
 
   const renderScripture = (data, t, isMain) => {
@@ -358,7 +379,7 @@ const App = () => {
 
             {/* CENTER: Audio Player */}
             <div style={{ display: 'flex', justifyContent: 'center' }}>
-              <AudioController ref={audioRef} scripture={scripture} ambientVolume={settings.ambientVolume ?? 0.4} />
+              <AudioController ref={audioRef} scripture={scripture} ambientVolume={settings.ambientVolume ?? 0.4} apiKey={settings.audioApiKey} />
             </div>
 
             {/* RIGHT: Menu Trigger */}
@@ -420,21 +441,35 @@ const App = () => {
             </div>
           )}
         </div>
+
+        {/* Floating Side Navigation */}
+        {!isSettingsOpen && (
+          <>
+            <button className={`side-nav-btn prev ${isNavVisible ? 'visible' : ''}`} style={{ left: '20px' }} onClick={(e) => { e.stopPropagation(); navigateChapter('prev'); }}><span>←</span></button>
+            <button className={`side-nav-btn next ${isNavVisible ? 'visible' : ''}`} style={{ right: '20px' }} onClick={(e) => { e.stopPropagation(); navigateChapter('next'); }}><span>→</span></button>
+          </>
+        )}
+
+        <SearchPanel isOpen={activePanel === 'search'} onClose={() => setActivePanel(null)} translation={translation} onSelectResult={(res) => { setPassage({ book: res.book_name, chapter: res.chapter, verse: res.verse }); setActivePanel(null); setIsSettingsOpen(false); }} />
+        <LibraryPanel 
+          isOpen={activePanel === 'library'} 
+          onClose={() => setActivePanel(null)} 
+          history={history} 
+          bookmarks={bookmarks} 
+          notes={notes}
+          onDeleteNote={deleteNote}
+          onSelectPassage={(p) => { 
+            setPassage(p); 
+            setTranslation(p.translation || translation); 
+            setActivePanel(null); 
+            setIsSettingsOpen(false); 
+          }} 
+        />
+        <ReadingPlanPanel isOpen={activePanel === 'plans'} onClose={() => setActivePanel(null)} onNavigate={(p) => { setPassage(p); setActivePanel(null); setIsSettingsOpen(false); }} />
+        <PrayerPanel isOpen={activePanel === 'prayer'} onClose={() => setActivePanel(null)} />
       </main>
 
-      {/* Floating Side Navigation */}
-      {!isSettingsOpen && (
-        <>
-          <button className={`side-nav-btn prev ${isNavVisible ? 'visible' : ''}`} style={{ left: isSidebarOpen ? '320px' : '20px' }} onClick={(e) => { e.stopPropagation(); navigateChapter('prev'); }}><span>←</span></button>
-          <button className={`side-nav-btn next ${isNavVisible ? 'visible' : ''}`} style={{ right: '20px' }} onClick={(e) => { e.stopPropagation(); navigateChapter('next'); }}><span>→</span></button>
-        </>
-      )}
-
       {isStudyOpen && !isSettingsOpen && (<aside className="sidebar-right"><StudyPanel activeVerse={activeVerseForNote} note={notes[`${passage.book}_${passage.chapter}_${activeVerseForNote?.verse}`]} onUpdateNote={updateNote} onClose={() => setIsStudyOpen(false)} /></aside>)}
-      <SearchPanel isOpen={activePanel === 'search'} onClose={() => setActivePanel(null)} translation={translation} onSelectResult={(res) => { setPassage({ book: res.book_name, chapter: res.chapter, verse: res.verse }); setActivePanel(null); setIsSettingsOpen(false); }} />
-      <LibraryPanel isOpen={activePanel === 'library'} onClose={() => setActivePanel(null)} history={history} bookmarks={bookmarks} onSelectPassage={(p) => { setPassage(p); setTranslation(p.translation || translation); setActivePanel(null); setIsSettingsOpen(false); }} />
-      <ReadingPlanPanel isOpen={activePanel === 'plans'} onClose={() => setActivePanel(null)} onNavigate={(p) => { setPassage(p); setActivePanel(null); setIsSettingsOpen(false); }} />
-      <PrayerPanel isOpen={activePanel === 'prayer'} onClose={() => setActivePanel(null)} />
 
       {isArtShareOpen && activeVerseForArt && (
         <ArtShareModal 
@@ -451,7 +486,7 @@ const App = () => {
         .nav-link.gold { color: var(--accent-gold); }
         .sidebar-left.closed { width: 0; }
         .sidebar-left.open { width: 300px; border-right: 1px solid var(--accent-soft); }
-        .side-nav-btn { position: fixed; top: 50%; transform: translateY(-50%); width: 50px; height: 80px; background: rgba(var(--bg-surface-rgb), 0.3); backdrop-filter: blur(20px); border: 1px solid var(--accent-soft); color: var(--accent-gold); font-size: 1.2rem; display: flex; align-items: center; justify-content: center; cursor: pointer; opacity: 0; pointer-events: none; transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); z-index: 500; }
+        .side-nav-btn { position: absolute; top: 50%; transform: translateY(-50%); width: 50px; height: 80px; background: rgba(var(--bg-surface-rgb), 0.3); backdrop-filter: blur(20px); border: 1px solid var(--accent-soft); color: var(--accent-gold); font-size: 1.2rem; display: flex; align-items: center; justify-content: center; cursor: pointer; opacity: 0; pointer-events: none; transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); z-index: 500; }
         .side-nav-btn.prev { border-radius: 40px 15px 15px 40px; }
         .side-nav-btn.next { border-radius: 15px 40px 40px 15px; }
         .side-nav-btn.visible { opacity: 0.3; pointer-events: auto; }

@@ -23,16 +23,24 @@ export const getScripture = async (id) => {
   return result ? result.data : null;
 };
 
-export const saveNote = async (id, content) => {
-  return await db.notes.put({ id, content });
+export const saveNote = async (id, content, title = '') => {
+  return await db.notes.put({ id, content, title, timestamp: Date.now() });
 };
 
 export const getNotes = async () => {
   const allNotes = await db.notes.toArray();
   return allNotes.reduce((acc, note) => {
-    acc[note.id] = note.content;
+    acc[note.id] = { content: note.content, title: note.title, timestamp: note.timestamp };
     return acc;
   }, {});
+};
+
+export const getAllNotesRaw = async () => {
+  return await db.notes.orderBy('timestamp').reverse().toArray();
+};
+
+export const deleteNote = async (id) => {
+  return await db.notes.delete(id);
 };
 
 export const saveHistory = async (item) => {

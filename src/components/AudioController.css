@@ -112,3 +112,14 @@
   opacity: 0.2;
   cursor: not-allowed;
 }
+
+.player-label.buffering {
+  color: var(--accent-gold);
+  animation: pulses 1.5s infinite ease-in-out;
+}
+
+@keyframes pulses {
+  0% { opacity: 0.4; }
+  50% { opacity: 1; }
+  100% { opacity: 0.4; }
+}

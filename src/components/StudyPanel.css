@@ -26,10 +26,26 @@
   letter-spacing: 2px;
 }
 
-.study-title h3 {
-  font-size: 1.1rem;
+.note-title-input {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid transparent;
   color: var(--text-primary);
+  font-size: 1.1rem;
   font-weight: 600;
+  padding: 4px 0;
+  outline: none;
+  width: 100%;
+  transition: border-color 0.2s;
+}
+
+.note-title-input:focus {
+  border-bottom-color: var(--accent-gold);
+}
+
+.note-title-input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.5;
 }
 
 .study-content {

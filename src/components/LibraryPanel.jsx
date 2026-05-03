@@ -1,8 +1,19 @@
 import React from 'react';
 import './LibraryPanel.css';
 
-const LibraryPanel = ({ isOpen, onClose, history, bookmarks, onSelectPassage }) => {
+const LibraryPanel = ({ isOpen, onClose, history, bookmarks, notes = {}, onDeleteNote, onSelectPassage }) => {
   if (!isOpen) return null;
+
+  const notesList = Object.entries(notes)
+    .map(([id, note]) => {
+      const parts = id.split('_');
+      const book = parts[0];
+      const chapter = parts[1];
+      const verse = parts[2];
+      return { id, book, chapter, verse, ...(typeof note === 'string' ? { content: note } : note) };
+    })
+    .filter(n => n.content || n.title)
+    .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
 
   return (
     <div className="library-overlay">
@@ -13,16 +24,42 @@ const LibraryPanel = ({ isOpen, onClose, history, bookmarks, onSelectPassage }) 
         </header>
 
         <div className="library-content">
+          {notesList.length > 0 && (
+            <section className="library-section">
+              <h3 className="section-label">Your Notes</h3>
+              <div className="library-list">
+                {notesList.map((item) => (
+                  <div key={item.id} className="library-item-minimal note" onClick={() => onSelectPassage(item)}>
+                    <div className="item-meta-minimal">
+                      <div className="note-header-row">
+                        <span className="note-title-preview">{item.title || 'Untitled Note'}</span>
+                        <button 
+                          className="delete-item-btn" 
+                          onClick={(e) => { e.stopPropagation(); onDeleteNote(item.id); }}
+                          title="Delete Note"
+                        >
+                          &times;
+                        </button>
+                      </div>
+                      <span className="note-ref-preview">{item.book} {item.chapter}:{item.verse}</span>
+                    </div>
+                    <div className="item-text-minimal snippet" dangerouslySetInnerHTML={{ 
+                      __html: item.content?.substring(0, 120) + (item.content?.length > 120 ? '...' : '') 
+                    }} />
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
           <section className="library-section">
             <h3 className="section-label">Recently Read</h3>
-            <div className="library-list">
+            <div className="library-grid history-grid">
               {history.length === 0 && <div className="empty-state">No history yet.</div>}
               {history.map((item, index) => (
-                <div key={index} className="library-item-minimal history" onClick={() => onSelectPassage(item)}>
-                  <div className="item-meta-minimal">{item.book} {item.chapter} • {item.translation?.toUpperCase()}</div>
-                  <div className="item-text-minimal snippet">
-                    {item.text || 'Continue reading...'}
-                  </div>
+                <div key={index} className="library-grid-item history" onClick={() => onSelectPassage(item)}>
+                  <div className="item-meta-minimal">{item.book} {item.chapter}</div>
+                  <div className="item-translation-tag">{item.translation?.toUpperCase()}</div>
                 </div>
               ))}
             </div>

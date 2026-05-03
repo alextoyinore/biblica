@@ -3,12 +3,14 @@ import Dexie from 'dexie';
 export const db = new Dexie('BiblicaDB');
 
 // Define database schema
-db.version(2).stores({ // Bumped version to 2
+db.version(3).stores({ // Bumped version to 3
   scriptures: 'id', // translation_book_chapter
   notes: 'id',      // book_chapter_verse
   history: '++id, book, chapter, timestamp',
   bookmarks: 'id',  // book_chapter_verse
-  highlights: 'id'  // book_chapter_verse
+  highlights: 'id', // book_chapter_verse
+  readingPlans: 'id', // plan_id
+  prayers: '++id, category, timestamp, isAnswered'
 });
 
 // Helper functions
@@ -76,4 +78,26 @@ export const getHighlights = async () => {
     acc[h.id] = h.color;
     return acc;
   }, {});
+};
+
+// Reading Plans Helpers
+export const getReadingPlans = async () => {
+  return await db.readingPlans.toArray();
+};
+
+export const updateReadingPlan = async (plan) => {
+  return await db.readingPlans.put(plan);
+};
+
+// Prayers Helpers
+export const getPrayers = async () => {
+  return await db.prayers.orderBy('timestamp').reverse().toArray();
+};
+
+export const savePrayer = async (prayer) => {
+  return await db.prayers.put({ ...prayer, timestamp: prayer.timestamp || Date.now() });
+};
+
+export const deletePrayer = async (id) => {
+  return await db.prayers.delete(id);
 };

@@ -17,6 +17,7 @@
   --radius-md: 8px;
   --radius-lg: 12px;
   --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --header-h: 68px;
 }
 
 [data-theme='sepia'] {
@@ -106,7 +107,7 @@ body {
 /* Overlay common styling */
 .overlay-panel {
   position: fixed;
-  top: 0;
+  top: var(--header-h);
   left: 0;
   right: 0;
   bottom: 0;
@@ -114,9 +115,10 @@ body {
   z-index: 1000;
   display: flex;
   justify-content: center;
-  padding: 60px 40px;
+  padding: 48px 40px;
   animation: fadeIn 0.2s ease-out;
   color: var(--text-primary);
+  overflow-y: auto;
 }
 
 /* Minimalist Close Buttons */
@@ -145,6 +147,29 @@ body {
 @keyframes fadeIn {
   from { opacity: 0; transform: scale(1.02); }
   to { opacity: 1; transform: scale(1); }
+}
+
+/* Back Navigation for full-page panels */
+.back-nav {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  outline: none;
+}
+
+.back-nav:hover {
+  color: var(--accent-gold);
+  transform: translateX(-3px);
 }
 
 /* Scrollbar styling */

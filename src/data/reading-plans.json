@@ -1,0 +1,34 @@
+[
+  {
+    "id": "gospels-30",
+    "name": "The Gospels in 30 Days",
+    "description": "A journey through the life of Christ across all four Gospels.",
+    "duration": 30,
+    "tasks": [
+      { "day": 1, "passages": [{ "book": "Matthew", "chapters": [1, 2, 3] }] },
+      { "day": 2, "passages": [{ "book": "Matthew", "chapters": [4, 5, 6] }] },
+      { "day": 3, "passages": [{ "book": "Matthew", "chapters": [7, 8, 9] }] },
+      { "day": 4, "passages": [{ "book": "Matthew", "chapters": [10, 11, 12] }] },
+      { "day": 5, "passages": [{ "book": "Matthew", "chapters": [13, 14, 15] }] }
+    ]
+  },
+  {
+    "id": "wisdom-15",
+    "name": "Wisdom Literature",
+    "description": "Selected readings from Psalms, Proverbs, and Ecclesiastes.",
+    "duration": 15,
+    "tasks": [
+      { "day": 1, "passages": [{ "book": "Psalms", "chapters": [1, 2, 3] }] },
+      { "day": 2, "passages": [{ "book": "Proverbs", "chapters": [1, 2] }] }
+    ]
+  },
+  {
+    "id": "whole-bible",
+    "name": "The Whole Bible",
+    "description": "A comprehensive plan to read from Genesis to Revelation.",
+    "duration": 365,
+    "tasks": [
+      { "day": 1, "passages": [{ "book": "Genesis", "chapters": [1, 2, 3] }] }
+    ]
+  }
+]

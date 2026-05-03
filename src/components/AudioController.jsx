@@ -1,0 +1,248 @@
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import './AudioController.css';
+
+// --- Procedural Ambient Sound Engine (Web Audio API) ---
+class AmbientEngine {
+  constructor() {
+    this.ctx = null;
+    this.nodes = [];
+    this.masterGain = null;
+  }
+
+  _getCtx() {
+    if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    return this.ctx;
+  }
+
+  setVolume(vol) {
+    if (this.masterGain) {
+      this.masterGain.gain.setTargetAtTime(vol, this.ctx.currentTime, 0.05);
+    }
+  }
+
+  _createMaster(vol) {
+    const ctx = this._getCtx();
+    const master = ctx.createGain();
+    master.gain.value = vol;
+    master.connect(ctx.destination);
+    this.masterGain = master;
+    return master;
+  }
+
+  startRain(vol = 0.4) {
+    this.stop();
+    const ctx = this._getCtx();
+    const master = this._createMaster(vol);
+
+    // White noise buffer
+    const bufferSize = ctx.sampleRate * 3;
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+
+    const noise = ctx.createBufferSource();
+    noise.buffer = buffer;
+    noise.loop = true;
+
+    const lpf = ctx.createBiquadFilter();
+    lpf.type = 'lowpass';
+    lpf.frequency.value = 1800;
+
+    const hpf = ctx.createBiquadFilter();
+    hpf.type = 'highpass';
+    hpf.frequency.value = 300;
+
+    const gain = ctx.createGain();
+    gain.gain.value = 0.15;
+
+    noise.connect(lpf);
+    lpf.connect(hpf);
+    hpf.connect(gain);
+    gain.connect(master);
+    noise.start();
+
+    this.nodes = [noise, lpf, hpf, gain];
+  }
+
+  startForest(vol = 0.4) {
+    this.stop();
+    const ctx = this._getCtx();
+    const master = this._createMaster(vol);
+
+    // Brown noise for wind
+    const bufferSize = ctx.sampleRate * 4;
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    let lastOut = 0;
+    for (let i = 0; i < bufferSize; i++) {
+      const white = Math.random() * 2 - 1;
+      data[i] = (lastOut + 0.02 * white) / 1.02;
+      lastOut = data[i];
+      data[i] *= 3.5;
+    }
+
+    const wind = ctx.createBufferSource();
+    wind.buffer = buffer;
+    wind.loop = true;
+
+    const lpf = ctx.createBiquadFilter();
+    lpf.type = 'lowpass';
+    lpf.frequency.value = 600;
+
+    const windGain = ctx.createGain();
+    windGain.gain.value = 0.18;
+
+    wind.connect(lpf);
+    lpf.connect(windGain);
+    windGain.connect(master);
+    wind.start();
+
+    // Subtle cricket oscillator
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.value = 3800;
+    const oscGain = ctx.createGain();
+    oscGain.gain.value = 0.015;
+    osc.connect(oscGain);
+    oscGain.connect(master);
+    osc.start();
+
+    this.nodes = [wind, lpf, windGain, osc, oscGain];
+  }
+
+  stop() {
+    this.nodes.forEach(n => {
+      try { n.stop?.(); n.disconnect?.(); } catch (e) { /* already stopped */ }
+    });
+    if (this.masterGain) {
+      try { this.masterGain.disconnect(); } catch (e) {}
+      this.masterGain = null;
+    }
+    this.nodes = [];
+  }
+}
+
+const AMBIENT_SOUNDS = [
+  { id: 'none', name: 'Silent' },
+  { id: 'rain', name: 'Rain' },
+  { id: 'forest', name: 'Forest' },
+];
+
+const AudioController = ({ scripture, ambientVolume = 0.4 }) => {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isAmbientPlaying, setIsAmbientPlaying] = useState(false);
+  const [ambientSound, setAmbientSound] = useState(AMBIENT_SOUNDS[0]);
+  const [speed, setSpeed] = useState(0.9);
+  const engineRef = useRef(new AmbientEngine());
+  const synth = window.speechSynthesis;
+
+  // Sync volume changes to the running engine
+  useEffect(() => {
+    if (isAmbientPlaying) {
+      engineRef.current.setVolume(ambientVolume);
+    }
+  }, [ambientVolume, isAmbientPlaying]);
+
+  const speak = useCallback(() => {
+    if (!scripture) return;
+
+    const textToRead = scripture.verses
+      .map(v => `Verse ${v.verse}. ${v.text}`)
+      .join(' ');
+
+    const utterance = new SpeechSynthesisUtterance(textToRead);
+    utterance.rate = speed;
+    utterance.lang = 'en-US';
+
+    // Try to find an English voice; Electron falls back to system default if none found
+    const voices = synth.getVoices();
+    const enVoice = voices.find(v => v.lang.startsWith('en'));
+    if (enVoice) utterance.voice = enVoice;
+
+    utterance.onend = () => setIsPlaying(false);
+    utterance.onerror = (e) => {
+      console.error('TTS error:', e.error);
+      setIsPlaying(false);
+    };
+
+    synth.cancel();
+    // 100ms — Electron needs a full tick after cancel() before a new speak() is accepted
+    setTimeout(() => synth.speak(utterance), 100);
+  }, [scripture, speed, synth]);
+
+  const handleTogglePlay = () => {
+    if (isPlaying) {
+      synth.cancel();
+      setIsPlaying(false);
+      return;
+    }
+    if (!scripture) return;
+    synth.resume(); // Unblock if paused/suspended
+    speak();
+    setIsPlaying(true);
+  };
+
+  const handleToggleAmbient = () => {
+    if (isAmbientPlaying) {
+      engineRef.current.stop();
+      setIsAmbientPlaying(false);
+    } else if (ambientSound.id !== 'none') {
+      if (ambientSound.id === 'rain') engineRef.current.startRain(ambientVolume);
+      if (ambientSound.id === 'forest') engineRef.current.startForest(ambientVolume);
+      setIsAmbientPlaying(true);
+    }
+  };
+
+  const handleAmbientChange = (e) => {
+    const sound = AMBIENT_SOUNDS.find(s => s.id === e.target.value);
+    setAmbientSound(sound);
+    if (isAmbientPlaying) {
+      engineRef.current.stop();
+      setIsAmbientPlaying(false);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      synth.cancel();
+      engineRef.current.stop();
+    };
+  }, []);
+
+  return (
+    <div className="audio-controller">
+      <div className="player-main">
+        <button
+          className={`play-btn ${isPlaying ? 'playing' : ''}`}
+          onClick={handleTogglePlay}
+          title={isPlaying ? 'Pause Reading' : 'Read Chapter'}
+        >
+          {isPlaying ? '⏸' : '▶'}
+        </button>
+        <div className="player-info">
+          <span className="player-label">{isPlaying ? 'READING WORD' : 'AUDIO OFF'}</span>
+          <div className="speed-control">
+            <button onClick={() => setSpeed(s => Math.max(0.5, parseFloat((s - 0.1).toFixed(1))))}>−</button>
+            <span>{speed.toFixed(1)}x</span>
+            <button onClick={() => setSpeed(s => Math.min(2, parseFloat((s + 0.1).toFixed(1))))}>+</button>
+          </div>
+        </div>
+      </div>
+
+      <div className="ambient-control">
+        <select value={ambientSound.id} onChange={handleAmbientChange}>
+          {AMBIENT_SOUNDS.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+        </select>
+        <button
+          className={`ambient-toggle ${isAmbientPlaying ? 'active' : ''}`}
+          onClick={handleToggleAmbient}
+          disabled={ambientSound.id === 'none'}
+        >
+          {isAmbientPlaying ? '🔊' : '🔇'}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default AudioController;

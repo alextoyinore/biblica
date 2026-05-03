@@ -1,0 +1,219 @@
+.reading-plans-overlay {
+  position: fixed;
+  top: var(--header-h);
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--bg-deep);
+  z-index: 2000;
+  display: flex;
+  justify-content: center;
+  padding: 48px 40px;
+  animation: fadeIn 0.3s ease-out;
+  overflow-y: auto;
+}
+
+.reading-plans-container {
+  width: 100%;
+  max-width: 1000px;
+  display: flex;
+  flex-direction: column;
+}
+
+.plans-header {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 40px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--accent-soft);
+}
+
+.plans-header h2 {
+  font-size: 0.8rem;
+  letter-spacing: 5px;
+  text-transform: uppercase;
+  color: var(--accent-gold);
+}
+
+.plans-content {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 20px;
+}
+
+.plans-section {
+  margin-bottom: 60px;
+}
+
+.plans-section h3 {
+  font-size: 1.2rem;
+  margin-bottom: 24px;
+  font-weight: 300;
+  color: var(--text-primary);
+}
+
+.status-text {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.active-plans-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 24px;
+}
+
+.active-plan-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--accent-soft);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transition: var(--transition-smooth);
+}
+
+.active-plan-card:hover {
+  border-color: var(--accent-gold);
+}
+
+.plan-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.plan-card-header h4 {
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+.progress-percent {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--accent-gold);
+}
+
+.progress-bar-container {
+  height: 4px;
+  background: var(--bg-deep);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  background: var(--accent-gold);
+  transition: width 1s ease-out;
+}
+
+.day-info {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.today-task {
+  background: var(--bg-deep);
+  padding: 16px;
+  border-radius: var(--radius-md);
+}
+
+.today-task h5 {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+
+.task-passage-btn {
+  background: none;
+  border: 1px solid var(--accent-soft);
+  color: var(--accent-gold);
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.task-passage-btn:hover {
+  background: rgba(197, 160, 89, 0.1);
+  border-color: var(--accent-gold);
+}
+
+.complete-day-btn {
+  background: var(--accent-gold);
+  color: white;
+  border: none;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  font-weight: 700;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.complete-day-btn:hover {
+  background: var(--accent-gold-hover);
+  transform: translateY(-2px);
+}
+
+.discover-plans-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.discover-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--accent-soft);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.discover-card h4 {
+  color: var(--accent-gold);
+}
+
+.discover-card p {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.discover-footer {
+  margin-top: auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 16px;
+}
+
+.discover-footer span {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.start-plan-btn {
+  background: none;
+  border: 1px solid var(--accent-gold);
+  color: var(--accent-gold);
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.start-plan-btn:hover {
+  background: var(--accent-gold);
+  color: white;
+}

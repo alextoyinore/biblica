@@ -5,11 +5,11 @@ const LibraryPanel = ({ isOpen, onClose, history, bookmarks, onSelectPassage }) 
   if (!isOpen) return null;
 
   return (
-    <div className="overlay-panel library-view">
+    <div className="library-overlay">
       <div className="library-container">
         <header className="library-header">
+          <button className="back-nav" onClick={onClose}>← Back</button>
           <h2 className="library-title">Library</h2>
-          <button className="close-button" onClick={onClose}>&times;</button>
         </header>
 
         <div className="library-content">

@@ -7,9 +7,9 @@ const SettingsPanel = ({ settings, onUpdateSettings, onClose }) => {
 
   return (
     <div className="settings-page" style={{ padding: '60px 80px', maxWidth: '800px', margin: '0 auto', animation: 'fadeIn 0.5s ease' }}>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '80px' }}>
+      <header style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginBottom: '80px' }}>
+        <button onClick={onClose} className="back-nav">← Back</button>
         <h2 style={{ fontSize: '1.2rem', color: 'var(--accent-gold)', letterSpacing: '8px', fontWeight: '800', textTransform: 'uppercase' }}>Settings</h2>
-        <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--accent-gold)', fontSize: '2rem', cursor: 'pointer' }}>&times;</button>
       </header>
 
       <section className="settings-section" style={{ marginBottom: '60px' }}>
@@ -63,11 +63,20 @@ const SettingsPanel = ({ settings, onUpdateSettings, onClose }) => {
         />
       </section>
 
-      <section className="settings-section">
+      <section className="settings-section" style={{ marginBottom: '60px' }}>
         <h3 className="setting-label">Line Height ({settings.lineHeight}x)</h3>
         <input 
           type="range" min="1.2" max="5.0" step="0.1" 
           value={settings.lineHeight} onChange={(e) => update('lineHeight', parseFloat(e.target.value))}
+          className="slim-slider"
+        />
+      </section>
+
+      <section className="settings-section">
+        <h3 className="setting-label">Ambient Sound Volume ({Math.round((settings.ambientVolume ?? 0.4) * 100)}%)</h3>
+        <input 
+          type="range" min="0" max="1" step="0.05" 
+          value={settings.ambientVolume ?? 0.4} onChange={(e) => update('ambientVolume', parseFloat(e.target.value))}
           className="slim-slider"
         />
       </section>

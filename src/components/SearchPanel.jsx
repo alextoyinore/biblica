@@ -31,6 +31,7 @@ const SearchPanel = ({ isOpen, onClose, onSelectResult, translation }) => {
     <div className="overlay-panel search-view">
       <div className="search-container">
         <header className="search-header">
+          <button className="back-nav" onClick={onClose}>← Back</button>
           <form onSubmit={handleSearch} style={{ flex: 1 }}>
             <input 
               autoFocus
@@ -41,7 +42,6 @@ const SearchPanel = ({ isOpen, onClose, onSelectResult, translation }) => {
               className="search-input"
             />
           </form>
-          <button className="close-button" onClick={onClose}>&times;</button>
         </header>
 
         <div className="search-results">

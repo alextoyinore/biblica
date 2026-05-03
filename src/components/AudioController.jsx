@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, forwardRef, useImperativeHandle } from 'react';
 import './AudioController.css';
 
 // --- Procedural Ambient Sound Engine (Web Audio API) ---
@@ -128,13 +128,20 @@ const AMBIENT_SOUNDS = [
   { id: 'forest', name: 'Forest' },
 ];
 
-const AudioController = ({ scripture, ambientVolume = 0.4 }) => {
+const AudioController = forwardRef(({ scripture, ambientVolume = 0.4 }, ref) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isAmbientPlaying, setIsAmbientPlaying] = useState(false);
   const [ambientSound, setAmbientSound] = useState(AMBIENT_SOUNDS[0]);
   const [speed, setSpeed] = useState(0.9);
   const engineRef = useRef(new AmbientEngine());
   const synth = window.speechSynthesis;
+
+  // Expose togglePlay to parent components
+  useImperativeHandle(ref, () => ({
+    togglePlay: () => {
+      handleTogglePlay();
+    }
+  }));
 
   // Sync volume changes to the running engine
   useEffect(() => {
@@ -243,6 +250,6 @@ const AudioController = ({ scripture, ambientVolume = 0.4 }) => {
       </div>
     </div>
   );
-};
+});
 
 export default AudioController;

@@ -1,2 +1,10 @@
-// See the Electron documentation for details on how to use preload scripts:
-// https://www.electronjs.org/docs/latest/tutorial/process-model#preload-scripts
+const { contextBridge, ipcRenderer } = require('electron');
+
+// Expose a safe, minimal IPC bridge to the renderer
+contextBridge.exposeInMainWorld('electronAPI', {
+  onMenuAction: (callback) => {
+    ipcRenderer.on('menu-action', (_event, action) => callback(action));
+    // Return a cleanup function
+    return () => ipcRenderer.removeAllListeners('menu-action');
+  },
+});

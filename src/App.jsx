@@ -84,6 +84,7 @@ const App = () => {
   const verseRefs = useRef({});
   const mainRef = useRef(null);
   const dragStart = useRef(null);
+  const audioRef = useRef(null);
 
   // Global click-away listener for verse menu and nav dropdown
   useEffect(() => {
@@ -110,6 +111,65 @@ const App = () => {
 
   useEffect(() => localStorage.setItem('biblica_settings', JSON.stringify(settings)), [settings]);
   useEffect(() => { document.body.setAttribute('data-theme', settings.theme); }, [settings.theme]);
+
+  // IPC Menu Action Listener
+  useEffect(() => {
+    if (!window.electronAPI) return;
+    
+    return window.electronAPI.onMenuAction((action) => {
+      switch (action) {
+        case 'open-reader':
+          setIsDashboardOpen(false);
+          setActivePanel(null);
+          setIsSettingsOpen(false);
+          break;
+        case 'open-dashboard':
+          setIsDashboardOpen(true);
+          break;
+        case 'open-library':
+          setActivePanel('library');
+          setIsDashboardOpen(false);
+          setIsSettingsOpen(false);
+          break;
+        case 'open-plans':
+          setActivePanel('plans');
+          setIsDashboardOpen(false);
+          setIsSettingsOpen(false);
+          break;
+        case 'open-prayer':
+          setActivePanel('prayer');
+          setIsDashboardOpen(false);
+          setIsSettingsOpen(false);
+          break;
+        case 'open-search':
+          setActivePanel('search');
+          setIsDashboardOpen(false);
+          setIsSettingsOpen(false);
+          break;
+        case 'open-settings':
+          setIsSettingsOpen(true);
+          setIsDashboardOpen(false);
+          break;
+        case 'prev-chapter':
+          navigateChapter('prev');
+          break;
+        case 'next-chapter':
+          navigateChapter('next');
+          break;
+        case 'toggle-split':
+          setIsParallel(prev => !prev);
+          break;
+        case 'open-picker':
+          setIsSidebarOpen(true);
+          break;
+        case 'toggle-tts':
+          if (audioRef.current) audioRef.current.togglePlay();
+          break;
+        default:
+          break;
+      }
+    });
+  }, [passage]); // Include passage/navigateChapter deps if they change, though navigateChapter uses state directly.
 
   // Main Fetch Effect (Handles Parallel)
   useEffect(() => {
@@ -298,7 +358,7 @@ const App = () => {
 
             {/* CENTER: Audio Player */}
             <div style={{ display: 'flex', justifyContent: 'center' }}>
-              <AudioController scripture={scripture} ambientVolume={settings.ambientVolume ?? 0.4} />
+              <AudioController ref={audioRef} scripture={scripture} ambientVolume={settings.ambientVolume ?? 0.4} />
             </div>
 
             {/* RIGHT: Menu Trigger */}

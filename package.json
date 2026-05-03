@@ -9,6 +9,7 @@
     "start": "electron-forge start -- --no-sandbox",
     "package": "electron-forge package",
     "make": "electron-forge make",
+    "debian": "electron-forge make --targets deb",
     "publish": "electron-forge publish",
     "lint": "echo \"No linting configured\""
   },

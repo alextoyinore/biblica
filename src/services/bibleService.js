@@ -1,6 +1,8 @@
-import { BOOK_TO_ID, API_BIBLE_ID_MAP } from '../constants/bible';
+import { BOOK_TO_ID } from '../constants/bible';
+import * as db from './db';
 
-const BASE_URL = 'https://bible-api.com';
+const passageCache = new Map();
+const commentaryCache = new Map();
 
 // Dynamic loaders for local translations
 const LOCAL_LOADERS = {
@@ -9,163 +11,150 @@ const LOCAL_LOADERS = {
   yor: () => import('../data/translations/yor_opt.json')
 };
 
+// Map clean IDs from UI to HelloAO API IDs
+const API_ID_MAP = {
+  asv: 'eng_asv',
+  web: 'eng_web',
+  dby: 'eng_dby',
+  dra: 'eng_dra',
+  ylt: 'eng_ylt',
+  bsb: 'BSB'
+};
+
 const TRANSLATION_NAMES = {
   kjv: 'King James Version',
   bbe: 'Bible in Basic English',
   yor: 'Yoruba Bible',
-  niv: 'New International Version',
-  nlt: 'New Living Translation',
-  csb: 'Christian Standard Bible',
   asv: 'American Standard Version',
+  web: 'World English Bible',
+  dby: 'Darby Translation',
+  dra: 'Douay-Rheims 1899',
+  ylt: 'Young\'s Literal Translation',
+  bsb: 'Berean Standard Bible',
 };
 
-export const fetchPassage = async (book, chapter, verse, translation = 'kjv', apiKey = null) => {
-  const activeKey = apiKey || 'PiYBAd42TpQXxU16P547Q';
-  
-  // 1. Try API.Bible for premium translations
-  if (API_BIBLE_ID_MAP[translation]) {
-    if (!activeKey) {
-      throw new Error(`An API Key is required for ${TRANSLATION_NAMES[translation] || translation}. Please add it in Settings.`);
-    }
-    try {
-      const bibleId = API_BIBLE_ID_MAP[translation];
-      const bookId = BOOK_TO_ID[book];
-      const chapterId = `${bookId}.${chapter}`;
-      
-      const response = await fetch(`https://rest.api.bible/v1/bibles/${bibleId}/chapters/${chapterId}?content-type=json`, {
-        headers: { 'api-key': activeKey }
-      });
-      
-      if (response.ok) {
-        const result = await response.json();
-        const content = result.data.content;
-        const verses = [];
+export const fetchPassage = async (book, chapter, verse, translation = 'kjv') => {
+  try {
+    let formattedVerses = null;
+    const cacheKey = `${translation}_${book}_${chapter}`;
 
-        if (Array.isArray(content)) {
-          // Case 1: JSON structure
-          const versesMap = {};
-          const traverse = (node) => {
-            if (node.type === 'text' && node.attrs && node.attrs.verseId) {
-              const parts = node.attrs.verseId.split('.');
-              const vNum = parts[parts.length - 1];
-              if (!versesMap[vNum]) versesMap[vNum] = '';
-              versesMap[vNum] += node.text;
-            }
-            if (node.items) node.items.forEach(traverse);
-          };
-          content.forEach(traverse);
-          
-          Object.entries(versesMap).forEach(([vNum, text]) => {
-            verses.push({
-              book_name: book,
-              chapter: parseInt(chapter),
-              verse: parseInt(vNum),
-              text: text.trim()
-            });
-          });
-        } else if (typeof content === 'string') {
-          // Case 2: HTML string
-          const parser = new DOMParser();
-          const doc = parser.parseFromString(content, 'text/html');
-          // API.Bible uses span with data-number for verses
-          const markers = doc.querySelectorAll('span[data-number]');
-          markers.forEach((marker) => {
-            const vNum = marker.getAttribute('data-number');
-            let text = '';
-            let next = marker.nextSibling;
-            
-            // Collect text until next verse marker
-            while (next && !(next.nodeType === 1 && next.hasAttribute('data-number'))) {
-              text += next.textContent || '';
-              next = next.nextSibling;
-            }
-            
-            if (vNum) {
-              verses.push({
-                book_name: book,
-                chapter: parseInt(chapter),
-                verse: parseInt(vNum),
-                text: text.trim()
-              });
-            }
-          });
-        }
-
-        const sortedVerses = verses.sort((a, b) => a.verse - b.verse);
-        const filteredVerses = verse 
-          ? sortedVerses.filter(v => v.verse === parseInt(verse))
-          : sortedVerses;
-
-        return {
-          text: filteredVerses.map(v => v.text).join('\n'),
-          verses: filteredVerses,
-          reference: verse ? `${book} ${chapter}:${verse}` : `${book} ${chapter}`,
-          translation_name: TRANSLATION_NAMES[translation] || translation.toUpperCase()
-        };
-      } else {
-        const errData = await response.json();
-        throw new Error(`API.Bible Error: ${errData.message || response.statusText}`);
-      }
-    } catch (err) {
-      console.error('API.Bible fetch failed:', err);
-      throw err;
-    }
-  }
-
-  // 2. Try local bundle
-  if (LOCAL_LOADERS[translation]) {
-    try {
+    if (LOCAL_LOADERS[translation]) {
       const bundle = await LOCAL_LOADERS[translation]();
       const bookData = bundle.default ? bundle.default[book] : bundle[book];
       
       if (bookData && bookData[chapter]) {
         const versesList = bookData[chapter];
         
-        // Map to API format
-        const formattedVerses = versesList.map((text, index) => ({
+        // Map to standard format
+        formattedVerses = versesList.map((text, index) => ({
           book_name: book,
           chapter: parseInt(chapter),
           verse: index + 1,
           text: text
         }));
-
-        const filteredVerses = verse 
-          ? formattedVerses.filter(v => v.verse === parseInt(verse))
-          : formattedVerses;
-
-        return {
-          text: filteredVerses.map(v => v.text).join('\n'),
-          verses: filteredVerses,
-          reference: verse ? `${book} ${chapter}:${verse}` : `${book} ${chapter}`,
-          translation_name: TRANSLATION_NAMES[translation] || translation.toUpperCase()
-        };
+      } else {
+        throw new Error(`Passage not found: ${book} ${chapter}`);
       }
-    } catch (localError) {
-      console.warn(`Local bundle load failed for ${translation}, falling back to API:`, localError);
-    }
-  }
+    } else {
+      // 1. Try memory cache
+      if (passageCache.has(cacheKey)) {
+        formattedVerses = passageCache.get(cacheKey);
+      } else {
+        // 2. Try IndexedDB cache
+        const localData = await db.getScripture(cacheKey);
+        if (localData) {
+          formattedVerses = localData;
+          passageCache.set(cacheKey, localData);
+        } else {
+          // 3. Fetch online from bible.helloao.org
+          const bookId = BOOK_TO_ID[book];
+          if (!bookId) throw new Error(`Unknown book: ${book}`);
+          
+          const apiTranslationId = API_ID_MAP[translation] || translation;
+          const url = `https://bible.helloao.org/api/${apiTranslationId}/${bookId}/${chapter}.json`;
+          const res = await fetch(url);
+          if (!res.ok) throw new Error(`Network response was not ok (${res.status})`);
+          const data = await res.json();
+          
+          const verses = [];
+          data.chapter.content.forEach(item => {
+              if (item.type === 'verse') {
+                  const textParts = item.content.map(c => {
+                      if (typeof c === 'string') return c;
+                      if (c && typeof c === 'object' && c.text) return c.text;
+                      return '';
+                  });
+                  verses[item.number - 1] = textParts.join('').trim();
+              }
+          });
 
-  // 2. Fallback to network API
-  try {
-    const reference = verse 
-      ? `${book} ${chapter}:${verse}`
-      : `${book} ${chapter}`;
-    
-    const response = await fetch(`${BASE_URL}/${encodeURIComponent(reference)}?translation=${translation}`);
-    
-    if (!response.ok) {
-      throw new Error(`Failed to fetch passage: ${response.statusText}`);
+          formattedVerses = [];
+          for (let i = 0; i < verses.length; i++) {
+            if (verses[i] !== undefined) {
+              formattedVerses.push({
+                book_name: book,
+                chapter: parseInt(chapter),
+                verse: i + 1,
+                text: verses[i]
+              });
+            }
+          }
+          
+          if (formattedVerses.length === 0) {
+              throw new Error(`No verses found in passage: ${book} ${chapter}`);
+          }
+
+          // Cache for future
+          passageCache.set(cacheKey, formattedVerses);
+          db.saveScripture(cacheKey, formattedVerses).catch(e => console.warn('Could not cache scripture to DB:', e));
+        }
+      }
     }
-    
-    const data = await response.json();
+
+    const filteredVerses = verse 
+      ? formattedVerses.filter(v => v.verse === parseInt(verse))
+      : formattedVerses;
+
     return {
-      text: data.text,
-      verses: data.verses,
-      reference: data.reference,
-      translation_name: data.translation_name
+      text: filteredVerses.map(v => v.text).join('\n'),
+      verses: filteredVerses,
+      reference: verse ? `${book} ${chapter}:${verse}` : `${book} ${chapter}`,
+      translation_name: TRANSLATION_NAMES[translation] || translation.toUpperCase()
     };
   } catch (error) {
-    console.error('Error fetching from Bible API:', error);
-    throw error;
+    console.error(`Failed to load translation ${translation}:`, error);
+    throw new Error(`Error: Unable to load ${TRANSLATION_NAMES[translation] || translation}. ${error.message}`);
+  }
+};
+
+export const fetchCommentary = async (commentaryId, book, chapter) => {
+  const cacheKey = `${commentaryId}_${book}_${chapter}`;
+  
+  if (commentaryCache.has(cacheKey)) {
+    return commentaryCache.get(cacheKey);
+  }
+
+  try {
+    const localData = await db.getCommentary(cacheKey);
+    if (localData) {
+      commentaryCache.set(cacheKey, localData);
+      return localData;
+    }
+
+    const bookId = BOOK_TO_ID[book];
+    if (!bookId) throw new Error(`Unknown book: ${book}`);
+
+    const url = `https://bible.helloao.org/api/c/${commentaryId}/${bookId}/${chapter}.json`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Failed to fetch commentary: ${res.status}`);
+    const data = await res.json();
+
+    commentaryCache.set(cacheKey, data);
+    db.saveCommentary(cacheKey, data).catch(e => console.warn('Could not cache commentary to DB:', e));
+    
+    return data;
+  } catch (err) {
+    console.error("fetchCommentary error:", err);
+    throw new Error("Unable to load commentary. Check network connection.");
   }
 };

@@ -15,9 +15,3 @@ export const BOOK_TO_ID = {
   "2 Peter": "2PE", "1 John": "1JN", "2 John": "2JN", "3 John": "3JN", "Jude": "JUD",
   "Revelation": "REV"
 };
-
-export const API_BIBLE_ID_MAP = {
-  niv: '78a9f6124f344018-01',
-  nlt: 'd6e14a625393b4da-01',
-  csb: 'a556c5305ee15c3f-01'
-};

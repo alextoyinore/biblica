@@ -8,26 +8,23 @@ import Dashboard from './components/Dashboard.jsx';
 import ArtShareModal from './components/ArtShareModal.jsx';
 import ReadingPlanPanel from './components/ReadingPlanPanel.jsx';
 import PrayerPanel from './components/PrayerPanel.jsx';
+
 import AudioController from './components/AudioController.jsx';
-import { fetchPassage } from './services/bibleService';
+import CommentaryPanel from './components/CommentaryPanel.jsx';
+import { fetchPassage, fetchCommentary } from './services/bibleService';
 import * as DB from './services/db';
 import bibleData from './data/bible-meta.json';
 
 const TRANSLATIONS = [
   { id: 'kjv', name: 'King James Version' },
+  { id: 'bbe', name: 'Bible in Basic English' },
   { id: 'yor', name: 'Yoruba Bible' },
   { id: 'asv', name: 'American Standard Version' },
   { id: 'web', name: 'World English Bible' },
-  { id: 'bbe', name: 'Bible in Basic English' },
-  { id: 'darby', name: 'Darby Bible' },
-  { id: 'dra', name: 'Douay-Rheims' },
-  { id: 'ylt', name: 'Young\'s Literal' },
-  { id: 'oeb-us', name: 'Open English Bible' },
-  { id: 'almeida', name: 'Almeida (Portuguese)' },
-  { id: 'synodal', name: 'Synodal (Russian)' },
-  { id: 'cuv', name: 'Chinese Union Version' },
-  { id: 'rccv', name: 'Cornilescu (Romanian)' },
-  { id: 'cherokee', name: 'Cherokee NT' }
+  { id: 'dby', name: 'Darby Translation' },
+  { id: 'dra', name: 'Douay-Rheims 1899' },
+  { id: 'ylt', name: "Young's Literal Translation" },
+  { id: 'bsb', name: 'Berean Standard Bible' }
 ];
 
 const HIGHLIGHT_COLORS = [
@@ -62,6 +59,10 @@ const App = () => {
   const [isArtShareOpen, setIsArtShareOpen] = useState(false);
   const [activeVerseForArt, setActiveVerseForArt] = useState(null);
   
+  // Commentary State
+  const [isCommentaryOpen, setIsCommentaryOpen] = useState(false);
+  const [activeVerseForCommentary, setActiveVerseForCommentary] = useState(null);
+  
   // Parallel States
   const [isParallel, setIsParallel] = useState(false);
   const [secondaryTranslation, setSecondaryTranslation] = useState('asv');
@@ -86,6 +87,7 @@ const App = () => {
   const [settings, setSettings] = useState({
     fontSize: 1.3,
     lineHeight: 2.2,
+    commentaryFontSize: 1.0,
     theme: 'modern-sacred',
     highlightStyle: 'heavy',
     ambientVolume: 0.4
@@ -432,6 +434,9 @@ const App = () => {
                     <button className="menu-action" onClick={() => { setActiveVerseForNote(activeVerseMenu.verse); setIsStudyOpen(true); setActiveVerseMenu(null); }}>
                       <span className="icon">✎</span> Add Study Note
                     </button>
+                    <button className="menu-action" onClick={() => { setActiveVerseForCommentary(activeVerseMenu.verse); setIsCommentaryOpen(true); setActiveVerseMenu(null); }}>
+                      <span className="icon">📖</span> View Commentary
+                    </button>
                     <button className="menu-action" onClick={() => { setActiveVerseForArt(activeVerseMenu.verse); setIsArtShareOpen(true); setActiveVerseMenu(null); }}>
                       <span className="icon">🎨</span> Share as Image
                     </button>
@@ -523,6 +528,17 @@ const App = () => {
         .color-dot.clear { background: var(--bg-deep) !important; color: var(--text-muted); font-size: 1.2rem; line-height: 24px; display: flex; align-items: center; justify-content: center; }
         @keyframes airIn { from { opacity: 0; transform: scale(0.96) translateY(-6px); } to { opacity: 1; transform: scale(1) translateY(0); } }
       `}</style>
+      
+      {isCommentaryOpen && !isSettingsOpen && (
+        <aside className="sidebar-right">
+          <CommentaryPanel
+            passage={passage}
+            activeVerse={activeVerseForCommentary}
+            settings={settings}
+            onClose={() => { setIsCommentaryOpen(false); setActiveVerseForCommentary(null); }}
+          />
+        </aside>
+      )}
     </div>
   );
 };

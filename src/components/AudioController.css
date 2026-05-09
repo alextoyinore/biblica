@@ -29,11 +29,13 @@
   justify-content: center;
   cursor: pointer;
   transition: var(--transition-smooth);
+  padding-left: 3px; /* Optically center the play triangle */
 }
 
 .play-btn.playing {
   background: var(--text-primary);
   animation: pulse 2s infinite;
+  padding-left: 0; /* Reset for pause icon */
 }
 
 @keyframes pulse {

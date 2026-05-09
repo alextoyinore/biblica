@@ -136,7 +136,6 @@ const AudioController = forwardRef(({ scripture, ambientVolume = 0.4, apiKey }, 
   const [speed, setSpeed] = useState(0.9);
   const [isBuffering, setIsBuffering] = useState(false);
   const engineRef = useRef(new AmbientEngine());
-  const audioNodeRef = useRef(new Audio());
 
   // Expose togglePlay to parent components
   useImperativeHandle(ref, () => ({
@@ -152,106 +151,42 @@ const AudioController = forwardRef(({ scripture, ambientVolume = 0.4, apiKey }, 
     }
   }, [ambientVolume, isAmbientPlaying]);
 
-  // Update playback speed if it changes while playing
-  useEffect(() => {
-    audioNodeRef.current.playbackRate = speed;
-  }, [speed]);
 
-  useEffect(() => {
-    const audio = audioNodeRef.current;
-    const handleEnded = () => setIsPlaying(false);
-    const handlePause = () => setIsPlaying(false);
-    const handlePlay = () => {
-      setIsPlaying(true);
-      setIsBuffering(false);
-    };
-    const handleWaiting = () => setIsBuffering(true);
-    const handleCanPlay = () => setIsBuffering(false);
-    const handleError = () => {
-      setIsPlaying(false);
-      setIsBuffering(false);
-    };
-    
-    audio.addEventListener('ended', handleEnded);
-    audio.addEventListener('pause', handlePause);
-    audio.addEventListener('play', handlePlay);
-    audio.addEventListener('waiting', handleWaiting);
-    audio.addEventListener('canplay', handleCanPlay);
-    audio.addEventListener('error', handleError);
-    
-    return () => {
-      audio.removeEventListener('ended', handleEnded);
-      audio.removeEventListener('pause', handlePause);
-      audio.removeEventListener('play', handlePlay);
-      audio.removeEventListener('waiting', handleWaiting);
-      audio.removeEventListener('canplay', handleCanPlay);
-      audio.removeEventListener('error', handleError);
-    };
-  }, []);
 
   const handleTogglePlay = async () => {
     if (isPlaying) {
-      audioNodeRef.current.pause();
+      window.speechSynthesis.pause();
       setIsPlaying(false);
       return;
     }
     
+    if (window.speechSynthesis.paused && window.speechSynthesis.speaking) {
+      window.speechSynthesis.resume();
+      setIsPlaying(true);
+      return;
+    }
+
     if (!scripture || !scripture.verses || scripture.verses.length === 0) return;
     
-    setIsBuffering(true);
-    const bookName = scripture.verses[0].book_name;
-    const chapter = scripture.verses[0].chapter;
+    setIsBuffering(false);
     
-    let url = '';
+    const fullText = scripture.verses.map(v => v.text).join(' ');
+    const utterance = new SpeechSynthesisUtterance(fullText);
+    utterance.rate = speed;
     
-    // 1. Try to get Premium Audio from API.Bible
-    if (apiKey) {
-      try {
-        const translation = scripture.translation_name.toLowerCase();
-        // Simple mapping: find the translation ID (niv, nlt, csb)
-        const transId = Object.keys(API_BIBLE_ID_MAP).find(k => scripture.translation_name.toLowerCase().includes(k));
-        const bibleId = API_BIBLE_ID_MAP[transId];
-        const bookId = BOOK_TO_ID[bookName];
-        const chapterId = `${bookId}.${chapter}`;
+    const voices = window.speechSynthesis.getVoices();
+    const preferredVoice = voices.find(v => v.name.includes('Google UK English Male')) || voices[0];
+    if (preferredVoice) utterance.voice = preferredVoice;
 
-        if (bibleId && bookId) {
-          const response = await fetch(`https://rest.api.bible/v1/bibles/${bibleId}/chapters/${chapterId}/audio`, {
-            headers: { 'api-key': apiKey }
-          });
-          if (response.ok) {
-            const data = await response.json();
-            // api.bible returns an HTML snippet with a player or a direct URL depending on the plan.
-            // Usually, for developers, it returns an 'expires' URL or similar.
-            if (data.data && data.data.resourceUrl) {
-              url = data.data.resourceUrl;
-            }
-          }
-        }
-      } catch (err) {
-        console.warn('Premium audio fetch failed:', err);
-      }
-    }
+    utterance.onend = () => setIsPlaying(false);
+    utterance.onerror = (e) => {
+      console.warn('Speech synthesis error', e);
+      setIsPlaying(false);
+    };
 
-    if (!url) {
-      setIsBuffering(false);
-      setIsPlaying(false);
-      console.warn('No audio URL found for this translation.');
-      return;
-    }
-    
-    if (audioNodeRef.current.src !== url) {
-      audioNodeRef.current.src = url;
-      audioNodeRef.current.playbackRate = speed;
-    }
-    
-    try {
-      await audioNodeRef.current.play();
-      setIsPlaying(true);
-    } catch (e) {
-      console.warn('Audio stream failed or blocked.', e);
-      setIsBuffering(false);
-      setIsPlaying(false);
-    }
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
+    setIsPlaying(true);
   };
 
   const handleToggleAmbient = () => {
@@ -276,8 +211,7 @@ const AudioController = forwardRef(({ scripture, ambientVolume = 0.4, apiKey }, 
 
   useEffect(() => {
     return () => {
-      audioNodeRef.current.pause();
-      audioNodeRef.current.src = '';
+      window.speechSynthesis.cancel();
       engineRef.current.stop();
     };
   }, []);

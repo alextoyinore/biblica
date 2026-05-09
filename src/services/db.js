@@ -3,8 +3,9 @@ import Dexie from 'dexie';
 export const db = new Dexie('BiblicaDB');
 
 // Define database schema
-db.version(3).stores({ // Bumped version to 3
+db.version(4).stores({ // Bumped version to 4
   scriptures: 'id', // translation_book_chapter
+  commentaries: 'id', // commentaryId_book_chapter
   notes: 'id',      // book_chapter_verse
   history: '++id, book, chapter, timestamp',
   bookmarks: 'id',  // book_chapter_verse
@@ -20,6 +21,15 @@ export const saveScripture = async (id, data) => {
 
 export const getScripture = async (id) => {
   const result = await db.scriptures.get(id);
+  return result ? result.data : null;
+};
+
+export const saveCommentary = async (id, data) => {
+  return await db.commentaries.put({ id, data });
+};
+
+export const getCommentary = async (id) => {
+  const result = await db.commentaries.get(id);
   return result ? result.data : null;
 };
 

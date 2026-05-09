@@ -64,6 +64,15 @@ const SettingsPanel = ({ settings, onUpdateSettings, onClose }) => {
       </section>
 
       <section className="settings-section" style={{ marginBottom: '60px' }}>
+        <h3 className="setting-label">Commentary Font Size ({settings.commentaryFontSize || 1.0}rem)</h3>
+        <input 
+          type="range" min="0.7" max="2.0" step="0.1" 
+          value={settings.commentaryFontSize || 1.0} onChange={(e) => update('commentaryFontSize', parseFloat(e.target.value))}
+          className="slim-slider"
+        />
+      </section>
+
+      <section className="settings-section" style={{ marginBottom: '60px' }}>
         <h3 className="setting-label">Line Height ({settings.lineHeight}x)</h3>
         <input 
           type="range" min="1.2" max="5.0" step="0.1" 
@@ -72,19 +81,6 @@ const SettingsPanel = ({ settings, onUpdateSettings, onClose }) => {
         />
       </section>
 
-      <section className="settings-section" style={{ marginBottom: '60px' }}>
-        <h3 className="setting-label">Premium Audio API Key</h3>
-        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '16px', marginTop: '8px' }}>
-          By default, Biblica uses a public domain KJV audio fallback. To enable high-quality narration for modern translations, provide a valid API Key from a provider like <strong>API.Bible</strong> or <strong>Bible Brain</strong>.
-        </p>
-        <input 
-          type="text" 
-          placeholder="Paste API Key here (e.g. from API.Bible)" 
-          value={settings.audioApiKey || ''} 
-          onChange={(e) => update('audioApiKey', e.target.value)}
-          style={{ width: '100%', padding: '16px', background: 'var(--bg-surface)', border: '1px solid var(--accent-soft)', borderRadius: 'var(--radius-md)', color: 'var(--text-primary)', outline: 'none', fontSize: '0.9rem' }}
-        />
-      </section>
 
       <section className="settings-section">
         <h3 className="setting-label">Ambient Sound Volume ({Math.round((settings.ambientVolume ?? 0.4) * 100)}%)</h3>

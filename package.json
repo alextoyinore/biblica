@@ -1,8 +1,8 @@
 {
   "name": "biblica",
-  "productName": "biblica",
+  "productName": "Biblica",
   "version": "1.0.0",
-  "description": "My Electron application description",
+  "description": "A simple and fast bible study app",
   "main": ".webpack/main",
   "private": true,
   "scripts": {

@@ -38,7 +38,14 @@ const TitleBar = ({ onMenuAction }) => {
         { label: 'Toggle Split View', action: 'toggle-split', shortcut: 'Ctrl+\\' },
         { label: 'Read Aloud', action: 'toggle-tts', shortcut: 'Ctrl+Space' },
         { type: 'separator' },
-        { label: 'Open Passage Picker', action: 'open-picker', shortcut: 'Ctrl+G' }
+      ]
+    },
+    {
+      label: 'Help',
+      items: [
+        { label: 'View Help', action: 'open-help', shortcut: 'F1' },
+        { type: 'separator' },
+        { label: 'About Biblica', action: 'open-about' }
       ]
     }
   ];

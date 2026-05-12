@@ -9,6 +9,8 @@ import ArtShareModal from './components/ArtShareModal.jsx';
 import ReadingPlanPanel from './components/ReadingPlanPanel.jsx';
 import PrayerPanel from './components/PrayerPanel.jsx';
 import TitleBar from './components/TitleBar.jsx';
+import AboutModal from './components/AboutModal.jsx';
+import HelpPanel from './components/HelpPanel.jsx';
 
 import AudioController from './components/AudioController.jsx';
 import CommentaryPanel from './components/CommentaryPanel.jsx';
@@ -59,6 +61,7 @@ const App = () => {
   const [isDashboardOpen, setIsDashboardOpen] = useState(false);
   const [isArtShareOpen, setIsArtShareOpen] = useState(false);
   const [activeVerseForArt, setActiveVerseForArt] = useState(null);
+  const [isAboutOpen, setIsAboutOpen] = useState(false);
   
   // Commentary State
   const [isCommentaryOpen, setIsCommentaryOpen] = useState(false);
@@ -155,6 +158,14 @@ const App = () => {
         setActivePanel('search');
         setIsDashboardOpen(false);
         setIsSettingsOpen(false);
+        break;
+      case 'open-help':
+        setActivePanel('help');
+        setIsDashboardOpen(false);
+        setIsSettingsOpen(false);
+        break;
+      case 'open-about':
+        setIsAboutOpen(true);
         break;
       case 'open-settings':
         setIsSettingsOpen(true);
@@ -256,14 +267,53 @@ const App = () => {
 
   useEffect(() => {
     const handleKeyDown = (e) => {
+      // Handle Escape for all modals/menus
+      if (e.key === 'Escape') {
+        if (activeVerseMenu) setActiveVerseMenu(null);
+        if (isAboutOpen) setIsAboutOpen(false);
+        if (isArtShareOpen) setIsArtShareOpen(false);
+        if (isSidebarOpen) setIsSidebarOpen(false);
+        if (isMenuOpen) setIsMenuOpen(false);
+        if (activePanel === 'search' || activePanel === 'help') setActivePanel(null);
+        return;
+      }
+      
+      // Handle F1 for Help
+      if (e.key === 'F1') {
+        e.preventDefault();
+        handleMenuAction('open-help');
+        return;
+      }
+
+      // Handle Ctrl/Cmd modifiers
+      const isCtrl = e.ctrlKey || e.metaKey;
+      if (isCtrl) {
+        switch (e.key.toLowerCase()) {
+          case '1': e.preventDefault(); handleMenuAction('open-reader'); break;
+          case '2': e.preventDefault(); handleMenuAction('open-dashboard'); break;
+          case 'l': e.preventDefault(); handleMenuAction('open-library'); break;
+          case 'r': e.preventDefault(); handleMenuAction('open-plans'); break;
+          case 'p': e.preventDefault(); handleMenuAction('open-prayer'); break;
+          case 'f': e.preventDefault(); handleMenuAction('open-search'); break;
+          case ',': e.preventDefault(); handleMenuAction('open-settings'); break;
+          case '\\': e.preventDefault(); handleMenuAction('toggle-split'); break;
+          case ' ': e.preventDefault(); handleMenuAction('toggle-tts'); break;
+          case 'g': e.preventDefault(); handleMenuAction('open-picker'); break;
+          case 'arrowright': e.preventDefault(); handleMenuAction('next-chapter'); break;
+          case 'arrowleft': e.preventDefault(); handleMenuAction('prev-chapter'); break;
+          default: break;
+        }
+        return;
+      }
+
+      // Regular keys without modifiers
       if (activePanel || isSidebarOpen || isSettingsOpen) return;
       if (e.key === 'ArrowRight') navigateChapter('next');
       if (e.key === 'ArrowLeft') navigateChapter('prev');
-      if (e.key === 'Escape') setActiveVerseMenu(null);
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [passage, activePanel, isSidebarOpen, isSettingsOpen]);
+  }, [passage, activePanel, isSidebarOpen, isSettingsOpen, activeVerseMenu, isAboutOpen, isArtShareOpen, isMenuOpen]);
 
   const handleMouseDown = (e) => { if (!activePanel && !isSidebarOpen) dragStart.current = e.clientX; };
   const handleMouseUp = (e) => {
@@ -430,6 +480,8 @@ const App = () => {
             <Dashboard onNavigate={handleDashboardNavigate} lastPassage={passage} />
           ) : isSettingsOpen ? (
             <SettingsPanel settings={settings} onUpdateSettings={setSettings} onClose={() => setIsSettingsOpen(false)} />
+          ) : activePanel === 'help' ? (
+            <HelpPanel onClose={() => setActivePanel(null)} />
           ) : (
             <div style={{ padding: '60px 80px', maxWidth: isParallel ? '1400px' : '800px', margin: '0 auto', position: 'relative', display: 'flex', gap: '60px' }}>
               {loading && !scripture && (
@@ -499,6 +551,10 @@ const App = () => {
           chapter={passage.chapter} 
           onClose={() => setIsArtShareOpen(false)} 
         />
+      )}
+
+      {isAboutOpen && (
+        <AboutModal onClose={() => setIsAboutOpen(false)} />
       )}
 
       <style>{`

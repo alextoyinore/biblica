@@ -1,5 +1,6 @@
 const { app, BrowserWindow, Menu, shell } = require('electron');
 const path = require('node:path');
+const fs = require('node:fs');
 
 // Required on Linux for speechSynthesis / TTS to work
 app.commandLine.appendSwitch('enable-speech-dispatcher');
@@ -165,9 +166,22 @@ const buildMenu = () => {
 };
 
 const createWindow = () => {
+  const statePath = path.join(app.getPath('userData'), 'window-state.json');
+  let windowState = { width: 1024, height: 768, isMaximized: false };
+
+  try {
+    if (fs.existsSync(statePath)) {
+      windowState = Object.assign(windowState, JSON.parse(fs.readFileSync(statePath, 'utf8')));
+    }
+  } catch (e) {
+    console.error('Failed to load window state', e);
+  }
+
   mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 800,
+    width: windowState.width,
+    height: windowState.height,
+    x: windowState.x,
+    y: windowState.y,
     frame: false,
     icon: path.join(__dirname, 'assets', 'logo.png'),
     webPreferences: {
@@ -178,7 +192,34 @@ const createWindow = () => {
     },
   });
 
-  mainWindow.maximize();
+  if (windowState.isMaximized) {
+    mainWindow.maximize();
+  }
+
+  const saveState = () => {
+    if (!mainWindow) return;
+    try {
+      const isMaximized = mainWindow.isMaximized();
+      if (!isMaximized) {
+        Object.assign(windowState, mainWindow.getBounds());
+      }
+      windowState.isMaximized = isMaximized;
+      fs.writeFileSync(statePath, JSON.stringify(windowState));
+    } catch (e) {
+      console.error('Failed to save window state', e);
+    }
+  };
+
+  let stateTimeout;
+  const debouncedSaveState = () => {
+    clearTimeout(stateTimeout);
+    stateTimeout = setTimeout(saveState, 500);
+  };
+
+  mainWindow.on('resize', debouncedSaveState);
+  mainWindow.on('move', debouncedSaveState);
+  mainWindow.on('close', saveState);
+
   mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
   if (!app.isPackaged) {
     mainWindow.webContents.openDevTools();

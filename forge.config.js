@@ -5,6 +5,7 @@ module.exports = {
   packagerConfig: {
     asar: true,
     icon: './src/assets/logo',
+    executableName: 'biblica',
   },
   rebuildConfig: {},
   makers: [
@@ -18,10 +19,6 @@ module.exports = {
     },
     {
       name: '@electron-forge/maker-deb',
-      config: {},
-    },
-    {
-      name: '@electron-forge/maker-rpm',
       config: {},
     },
   ],

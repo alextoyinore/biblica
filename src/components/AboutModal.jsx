@@ -39,7 +39,7 @@ const AboutModal = ({ onClose }) => {
           </div>
           <div>
             <span style={{ display: 'block', fontSize: '0.65rem', textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '2px', fontWeight: '700' }}>Company</span>
-            <span style={{ fontSize: '0.9rem', color: 'var(--text-primary)', fontWeight: '500' }}>ProjectStar Technologies, Nigeria</span>
+            <span style={{ fontSize: '0.9rem', color: 'var(--text-primary)', fontWeight: '500' }}>Star Technologies, Nigeria</span>
           </div>
           <div>
             <span style={{ display: 'block', fontSize: '0.65rem', textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '2px', fontWeight: '700' }}>Description</span>
@@ -48,7 +48,7 @@ const AboutModal = ({ onClose }) => {
         </div>
 
         <div style={{ borderTop: '1px solid var(--accent-soft)', paddingTop: '20px' }}>
-          <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>&copy; {new Date().getFullYear()} ProjectStar Technologies Nigeria. All rights reserved.</p>
+          <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>&copy; {new Date().getFullYear()} Star Technologies. All rights reserved.</p>
         </div>
       </div>
     </div>

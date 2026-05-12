@@ -8,6 +8,7 @@ import Dashboard from './components/Dashboard.jsx';
 import ArtShareModal from './components/ArtShareModal.jsx';
 import ReadingPlanPanel from './components/ReadingPlanPanel.jsx';
 import PrayerPanel from './components/PrayerPanel.jsx';
+import TitleBar from './components/TitleBar.jsx';
 
 import AudioController from './components/AudioController.jsx';
 import CommentaryPanel from './components/CommentaryPanel.jsx';
@@ -124,63 +125,65 @@ const App = () => {
   useEffect(() => localStorage.setItem('biblica_settings', JSON.stringify(settings)), [settings]);
   useEffect(() => { document.body.setAttribute('data-theme', settings.theme); }, [settings.theme]);
 
+  // Menu Action Handler
+  const handleMenuAction = (action) => {
+    switch (action) {
+      case 'open-reader':
+        setIsDashboardOpen(false);
+        setActivePanel(null);
+        setIsSettingsOpen(false);
+        break;
+      case 'open-dashboard':
+        setIsDashboardOpen(true);
+        break;
+      case 'open-library':
+        setActivePanel('library');
+        setIsDashboardOpen(false);
+        setIsSettingsOpen(false);
+        break;
+      case 'open-plans':
+        setActivePanel('plans');
+        setIsDashboardOpen(false);
+        setIsSettingsOpen(false);
+        break;
+      case 'open-prayer':
+        setActivePanel('prayer');
+        setIsDashboardOpen(false);
+        setIsSettingsOpen(false);
+        break;
+      case 'open-search':
+        setActivePanel('search');
+        setIsDashboardOpen(false);
+        setIsSettingsOpen(false);
+        break;
+      case 'open-settings':
+        setIsSettingsOpen(true);
+        setIsDashboardOpen(false);
+        break;
+      case 'prev-chapter':
+        navigateChapter('prev');
+        break;
+      case 'next-chapter':
+        navigateChapter('next');
+        break;
+      case 'toggle-split':
+        setIsParallel(prev => !prev);
+        break;
+      case 'open-picker':
+        setIsSidebarOpen(true);
+        break;
+      case 'toggle-tts':
+        if (audioRef.current) audioRef.current.togglePlay();
+        break;
+      default:
+        break;
+    }
+  };
+
   // IPC Menu Action Listener
   useEffect(() => {
     if (!window.electronAPI) return;
-    
-    return window.electronAPI.onMenuAction((action) => {
-      switch (action) {
-        case 'open-reader':
-          setIsDashboardOpen(false);
-          setActivePanel(null);
-          setIsSettingsOpen(false);
-          break;
-        case 'open-dashboard':
-          setIsDashboardOpen(true);
-          break;
-        case 'open-library':
-          setActivePanel('library');
-          setIsDashboardOpen(false);
-          setIsSettingsOpen(false);
-          break;
-        case 'open-plans':
-          setActivePanel('plans');
-          setIsDashboardOpen(false);
-          setIsSettingsOpen(false);
-          break;
-        case 'open-prayer':
-          setActivePanel('prayer');
-          setIsDashboardOpen(false);
-          setIsSettingsOpen(false);
-          break;
-        case 'open-search':
-          setActivePanel('search');
-          setIsDashboardOpen(false);
-          setIsSettingsOpen(false);
-          break;
-        case 'open-settings':
-          setIsSettingsOpen(true);
-          setIsDashboardOpen(false);
-          break;
-        case 'prev-chapter':
-          navigateChapter('prev');
-          break;
-        case 'next-chapter':
-          navigateChapter('next');
-          break;
-        case 'toggle-split':
-          setIsParallel(prev => !prev);
-          break;
-        case 'open-picker':
-          setIsSidebarOpen(true);
-          break;
-        case 'toggle-tts':
-          if (audioRef.current) audioRef.current.togglePlay();
-          break;
-        default:
-          break;
-      }
-    });
+    return window.electronAPI.onMenuAction(handleMenuAction);
   }, [passage]); // Include passage/navigateChapter deps if they change, though navigateChapter uses state directly.
 
   // Main Fetch Effect (Handles Parallel)
@@ -317,6 +320,17 @@ const App = () => {
     await DB.deleteNote(noteId);
   };
 
+  const renderVerseText = (text) => {
+    if (!text) return null;
+    const parts = text.split(/\{([^}]+)\}/g);
+    return parts.map((part, index) => {
+      if (index % 2 === 1) {
+        return <span key={index} style={{ fontStyle: 'italic', opacity: 0.85 }}>{part}</span>;
+      }
+      return part;
+    });
+  };
+
   const renderScripture = (data, t, isMain) => {
     if (!data) return null;
     return (
@@ -335,7 +349,7 @@ const App = () => {
               <sup onClick={(e) => { e.stopPropagation(); setActiveVerseForNote(v); setIsStudyOpen(true); }} style={{ fontSize: '0.6em', color: isBookmarked ? 'var(--accent-gold)' : (highlightColor && isHeavy ? '#ffffff' : 'var(--accent-gold)'), marginRight: '12px', marginLeft: i === 0 ? 0 : '10px', verticalAlign: 'baseline', cursor: 'pointer', fontWeight: '800' }}>
                 {v.verse}{isBookmarked ? ' 🔖' : ''}
               </sup>
-              {v.text}
+              {renderVerseText(v.text)}
               {' '}
             </span>
           );
@@ -345,8 +359,10 @@ const App = () => {
   };
 
   return (
-    <div className="app-container">
-      <aside className={`sidebar-left ${isSidebarOpen ? 'open' : 'closed'}`} style={{ width: isSidebarOpen ? '300px' : '0', overflow: 'hidden', transition: 'width 0.3s ease' }}>
+    <div className="app-container" style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+      <TitleBar onMenuAction={handleMenuAction} />
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+        <aside className={`sidebar-left ${isSidebarOpen ? 'open' : 'closed'}`} style={{ width: isSidebarOpen ? '300px' : '0', overflow: 'hidden', transition: 'width 0.3s ease' }}>
         <div style={{ minWidth: '300px', height: '100%', display: 'flex', flexDirection: 'column' }}>
           <div style={{ padding: '24px', borderBottom: '1px solid var(--accent-soft)', textAlign: 'center' }}>
             <h1 style={{ fontSize: '0.7rem', color: 'var(--accent-gold)', letterSpacing: '4px', fontWeight: '800' }}>BIBLICA</h1>
@@ -505,6 +521,9 @@ const App = () => {
         [data-theme='modern-sacred'] .air-dropdown { background: rgba(18,18,20,0.92); }
         [data-theme='sepia'] .air-dropdown { background: rgba(253,246,227,0.95); }
         [data-theme='light'] .air-dropdown { background: rgba(255,255,255,0.95); }
+        [data-theme='midnight'] .air-dropdown { background: rgba(17, 24, 39, 0.95); }
+        [data-theme='forest'] .air-dropdown { background: rgba(27, 41, 31, 0.95); }
+        [data-theme='lavender'] .air-dropdown { background: rgba(56, 52, 67, 0.95); }
         .air-item { background: none; border: none; color: var(--text-secondary); font-size: 0.8rem; font-weight: 500; text-align: left; padding: 10px 14px; border-radius: 10px; cursor: pointer; width: 100%; transition: var(--transition-smooth); letter-spacing: 0.3px; display: flex; align-items: center; gap: 10px; }
         .air-item:hover { background: rgba(197,160,89,0.08); color: var(--accent-gold); }
         .air-item.active { color: var(--accent-gold); font-weight: 700; }
@@ -516,6 +535,10 @@ const App = () => {
         [data-theme='modern-sacred'] .verse-menu { background-color: rgba(18, 18, 20, 0.9); }
         [data-theme='sepia'] .verse-menu { background-color: rgba(253, 246, 227, 0.9); }
         [data-theme='light'] .verse-menu { background-color: rgba(255, 255, 255, 0.9); }
+        [data-theme='midnight'] .verse-menu { background-color: rgba(17, 24, 39, 0.9); }
+        [data-theme='forest'] .verse-menu { background-color: rgba(27, 41, 31, 0.9); }
+        [data-theme='lavender'] .verse-menu { background-color: rgba(56, 52, 67, 0.9); }
+        option { background-color: var(--bg-elevated); color: var(--text-primary); }
         .menu-header { border-bottom: 1px solid var(--accent-soft); padding-bottom: 4px; margin-bottom: 4px; }
         .menu-footer { border-top: 1px solid var(--accent-soft); padding-top: 4px; margin-top: 4px; }
         .menu-action { width: 100%; background: none; border: none; color: var(--text-primary); font-size: 0.8rem; text-align: left; padding: 10px 12px; border-radius: 10px; cursor: pointer; font-weight: 500; display: flex; align-items: center; gap: 10px; transition: var(--transition-smooth); }
@@ -539,6 +562,7 @@ const App = () => {
           />
         </aside>
       )}
+      </div>
     </div>
   );
 };

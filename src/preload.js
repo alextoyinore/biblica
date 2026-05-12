@@ -7,4 +7,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // Return a cleanup function
     return () => ipcRenderer.removeAllListeners('menu-action');
   },
+  minimize: () => ipcRenderer.send('window-minimize'),
+  maximize: () => ipcRenderer.send('window-maximize'),
+  close: () => ipcRenderer.send('window-close')
 });

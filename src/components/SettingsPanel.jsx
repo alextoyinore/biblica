@@ -14,8 +14,8 @@ const SettingsPanel = ({ settings, onUpdateSettings, onClose }) => {
 
       <section className="settings-section" style={{ marginBottom: '60px' }}>
         <h3 className="setting-label">Theme</h3>
-        <div className="theme-options" style={{ display: 'flex', gap: '20px', marginTop: '20px' }}>
-          {['modern-sacred', 'sepia', 'light'].map(t => (
+        <div className="theme-options" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginTop: '20px' }}>
+          {['modern-sacred', 'sepia', 'light', 'midnight', 'forest', 'lavender'].map(t => (
             <button 
               key={t}
               onClick={() => update('theme', t)}

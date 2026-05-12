@@ -33,9 +33,8 @@
 }
 
 .play-btn.playing {
-  background: var(--text-primary);
   animation: pulse 2s infinite;
-  padding-left: 0; /* Reset for pause icon */
+  padding-left: 0;
 }
 
 @keyframes pulse {

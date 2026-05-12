@@ -11,6 +11,8 @@ if (require('electron-squirrel-startup')) {
 
 let mainWindow;
 
+const { ipcMain } = require('electron');
+
 const sendAction = (action) => {
   if (mainWindow) mainWindow.webContents.send('menu-action', action);
 };
@@ -133,7 +135,7 @@ const buildMenu = () => {
       submenu: [
         { role: 'reload' },
         { role: 'forceReload' },
-        { role: 'toggleDevTools' },
+        ...(!app.isPackaged ? [{ role: 'toggleDevTools' }] : []),
         { type: 'separator' },
         { role: 'resetZoom' },
         { role: 'zoomIn' },
@@ -166,19 +168,43 @@ const createWindow = () => {
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
-    icon: path.join(__dirname, '../../src/assets/logo.png'),
+    frame: false,
+    icon: path.join(__dirname, 'assets', 'logo.png'),
     webPreferences: {
       preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
       spellcheck: false,
+      contextIsolation: true,
+      nodeIntegration: false
     },
   });
 
   mainWindow.maximize();
   mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
-  mainWindow.webContents.openDevTools();
+  if (!app.isPackaged) {
+    mainWindow.webContents.openDevTools();
+  }
 
-  // Set the app menu
-  Menu.setApplicationMenu(buildMenu());
+  // Remove default menu
+  Menu.setApplicationMenu(null);
+
+  // Window control IPCs
+  ipcMain.on('window-minimize', () => {
+    if (mainWindow) mainWindow.minimize();
+  });
+  
+  ipcMain.on('window-maximize', () => {
+    if (mainWindow) {
+      if (mainWindow.isMaximized()) {
+        mainWindow.unmaximize();
+      } else {
+        mainWindow.maximize();
+      }
+    }
+  });
+  
+  ipcMain.on('window-close', () => {
+    if (mainWindow) mainWindow.close();
+  });
 };
 
 app.whenReady().then(() => {

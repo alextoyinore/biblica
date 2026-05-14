@@ -16,6 +16,7 @@ import AudioController from './components/AudioController.jsx';
 import CommentaryPanel from './components/CommentaryPanel.jsx';
 import { fetchPassage, fetchCommentary } from './services/bibleService';
 import * as DB from './services/db';
+import { saveNoteEntry, deleteNoteEntry } from './services/db';
 import bibleData from './data/bible-meta.json';
 
 const TRANSLATIONS = [
@@ -308,6 +309,12 @@ const App = () => {
 
       // Regular keys without modifiers
       if (activePanel || isSidebarOpen || isSettingsOpen) return;
+
+      // Don't intercept arrow keys when focus is inside a text field or rich-text editor
+      const tag = document.activeElement?.tagName;
+      const isEditable = document.activeElement?.isContentEditable;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || isEditable) return;
+
       if (e.key === 'ArrowRight') navigateChapter('next');
       if (e.key === 'ArrowLeft') navigateChapter('prev');
     };
@@ -353,21 +360,14 @@ const App = () => {
     setActiveVerseMenu(null);
   };
 
-  const updateNote = async (verseNumber, text, title = '') => {
-    const noteKey = `${passage.book}_${passage.chapter}_${verseNumber}`;
-    const existing = notes[noteKey] || {};
-    const updatedNote = { ...existing, content: text, title: title || existing.title || '' };
-    setNotes(prev => ({ ...prev, [noteKey]: updatedNote }));
-    await DB.saveNote(noteKey, updatedNote.content, updatedNote.title);
+  const addOrUpdateNoteEntry = async (verseKey, noteId, content, title = '') => {
+    await saveNoteEntry(verseKey, noteId, content, title);
+    setNotes(await DB.getNotes());
   };
 
-  const deleteNote = async (noteId) => {
-    setNotes(prev => {
-      const next = { ...prev };
-      delete next[noteId];
-      return next;
-    });
-    await DB.deleteNote(noteId);
+  const removeNoteEntry = async (verseKey, noteId) => {
+    await deleteNoteEntry(verseKey, noteId);
+    setNotes(await DB.getNotes());
   };
 
   const renderVerseText = (text) => {
@@ -390,7 +390,7 @@ const App = () => {
           const isHighlighted = passage.verse === v.verse;
           const highlightColor = highlights[id];
           const isBookmarked = bookmarks.some(b => b.book === passage.book && b.chapter === passage.chapter && b.verse === v.verse);
-          const hasNote = !!notes[id];
+          const hasNote = Array.isArray(notes[id]) && notes[id].length > 0;
           const isHeavy = (settings.highlightStyle || 'heavy') === 'heavy';
           const bgColor = highlightColor ? (isHeavy ? highlightColor : hexToRgba(highlightColor, 0.2)) : (isHighlighted ? 'rgba(197, 160, 89, 0.15)' : 'transparent');
           const textColor = (highlightColor && isHeavy) ? '#ffffff' : 'inherit';
@@ -499,9 +499,24 @@ const App = () => {
                   </div>
                   <div className="color-grid">{HIGHLIGHT_COLORS.map(c => (<button key={c.id} className="color-dot" style={{ backgroundColor: c.color }} onClick={() => applyHighlight(c.color)} />))}<button className="color-dot clear" onClick={() => applyHighlight(null)}>×</button></div>
                   <div className="menu-footer">
-                    <button className="menu-action" onClick={() => { setActiveVerseForNote(activeVerseMenu.verse); setIsStudyOpen(true); setActiveVerseMenu(null); }}>
-                      <span className="icon">✎</span> Add Study Note
-                    </button>
+                    {(() => {
+                      const vKey = `${passage.book}_${passage.chapter}_${activeVerseMenu.verse.verse}`;
+                      const hasNotes = notes[vKey]?.length > 0;
+                      return hasNotes ? (
+                        <>
+                          <button className="menu-action" onClick={() => { setActiveVerseForNote(activeVerseMenu.verse); setIsStudyOpen(true); setActiveVerseMenu(null); }}>
+                            <span className="icon">📋</span> View Notes
+                          </button>
+                          <button className="menu-action" onClick={() => { setActiveVerseForNote(activeVerseMenu.verse); setIsStudyOpen(true); setActiveVerseMenu(null); }}>
+                            <span className="icon">✎</span> Add New Note
+                          </button>
+                        </>
+                      ) : (
+                        <button className="menu-action" onClick={() => { setActiveVerseForNote(activeVerseMenu.verse); setIsStudyOpen(true); setActiveVerseMenu(null); }}>
+                          <span className="icon">✎</span> Add Study Note
+                        </button>
+                      );
+                    })()}
                     <button className="menu-action" onClick={() => { setActiveVerseForCommentary(activeVerseMenu.verse); setIsCommentaryOpen(true); setActiveVerseMenu(null); }}>
                       <span className="icon">📖</span> View Commentary
                     </button>
@@ -530,7 +545,7 @@ const App = () => {
           history={history} 
           bookmarks={bookmarks} 
           notes={notes}
-          onDeleteNote={deleteNote}
+          onDeleteNote={(verseKey, noteId) => removeNoteEntry(verseKey, noteId)}
           onSelectPassage={(p) => { 
             setPassage(p); 
             setTranslation(p.translation || translation); 
@@ -542,7 +557,18 @@ const App = () => {
         <PrayerPanel isOpen={activePanel === 'prayer'} onClose={() => setActivePanel(null)} />
       </main>
 
-      {isStudyOpen && !isSettingsOpen && (<aside className="sidebar-right"><StudyPanel activeVerse={activeVerseForNote} note={notes[`${passage.book}_${passage.chapter}_${activeVerseForNote?.verse}`]} onUpdateNote={updateNote} onClose={() => setIsStudyOpen(false)} /></aside>)}
+      {isStudyOpen && !isSettingsOpen && (
+        <aside className="sidebar-right">
+          <StudyPanel
+            activeVerse={activeVerseForNote}
+            verseKey={`${passage.book}_${passage.chapter}_${activeVerseForNote?.verse}`}
+            entries={notes[`${passage.book}_${passage.chapter}_${activeVerseForNote?.verse}`] || []}
+            onSaveEntry={addOrUpdateNoteEntry}
+            onDeleteEntry={removeNoteEntry}
+            onClose={() => setIsStudyOpen(false)}
+          />
+        </aside>
+      )}
 
       {isArtShareOpen && activeVerseForArt && (
         <ArtShareModal 

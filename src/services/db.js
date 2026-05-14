@@ -2,15 +2,42 @@ import Dexie from 'dexie';
 
 export const db = new Dexie('BiblicaDB');
 
-// Define database schema
-db.version(4).stores({ // Bumped version to 4
-  scriptures: 'id', // translation_book_chapter
-  commentaries: 'id', // commentaryId_book_chapter
-  notes: 'id',      // book_chapter_verse
+// Schema v5: notes now store an 'entries' array for multi-note support per verse
+db.version(5).stores({
+  scriptures: 'id',
+  commentaries: 'id',
+  notes: 'id',      // book_chapter_verse → { id, entries: [{noteId, title, content, timestamp}] }
   history: '++id, book, chapter, timestamp',
-  bookmarks: 'id',  // book_chapter_verse
-  highlights: 'id', // book_chapter_verse
-  readingPlans: 'id', // plan_id
+  bookmarks: 'id',
+  highlights: 'id',
+  readingPlans: 'id',
+  prayers: '++id, category, timestamp, isAnswered'
+}).upgrade(tx => {
+  // Migrate old single-note records { id, content, title, timestamp } → { id, entries: [...] }
+  return tx.table('notes').toCollection().modify(record => {
+    if (!record.entries) {
+      record.entries = [{
+        noteId: `${record.id}_0`,
+        title: record.title || '',
+        content: record.content || '',
+        timestamp: record.timestamp || Date.now()
+      }];
+      delete record.content;
+      delete record.title;
+      delete record.timestamp;
+    }
+  });
+});
+
+// Keep older version chains so existing DBs can upgrade step by step
+db.version(4).stores({
+  scriptures: 'id',
+  commentaries: 'id',
+  notes: 'id',
+  history: '++id, book, chapter, timestamp',
+  bookmarks: 'id',
+  highlights: 'id',
+  readingPlans: 'id',
   prayers: '++id, category, timestamp, isAnswered'
 });
 
@@ -33,25 +60,55 @@ export const getCommentary = async (id) => {
   return result ? result.data : null;
 };
 
-export const saveNote = async (id, content, title = '') => {
-  return await db.notes.put({ id, content, title, timestamp: Date.now() });
+/**
+ * Save (create or update) a single note entry within a verse.
+ * @param {string} verseKey  e.g. "Genesis_1_1"
+ * @param {string} noteId    unique id for this entry (e.g. "Genesis_1_1_<timestamp>")
+ * @param {string} content   HTML content
+ * @param {string} title     plain-text title
+ */
+export const saveNoteEntry = async (verseKey, noteId, content, title = '') => {
+  const record = await db.notes.get(verseKey) || { id: verseKey, entries: [] };
+  const idx = record.entries.findIndex(e => e.noteId === noteId);
+  const entry = { noteId, title, content, timestamp: Date.now() };
+  if (idx >= 0) {
+    record.entries[idx] = entry;
+  } else {
+    record.entries.push(entry);
+  }
+  return await db.notes.put(record);
 };
 
+/**
+ * Delete a single note entry. Removes the whole verse record if no entries remain.
+ */
+export const deleteNoteEntry = async (verseKey, noteId) => {
+  const record = await db.notes.get(verseKey);
+  if (!record) return;
+  record.entries = record.entries.filter(e => e.noteId !== noteId);
+  if (record.entries.length === 0) {
+    return await db.notes.delete(verseKey);
+  }
+  return await db.notes.put(record);
+};
+
+/**
+ * Returns all notes as { [verseKey]: [entry, ...] }
+ */
 export const getNotes = async () => {
-  const allNotes = await db.notes.toArray();
-  return allNotes.reduce((acc, note) => {
-    acc[note.id] = { content: note.content, title: note.title, timestamp: note.timestamp };
+  const allRecords = await db.notes.toArray();
+  return allRecords.reduce((acc, record) => {
+    acc[record.id] = record.entries || [];
     return acc;
   }, {});
 };
 
-export const getAllNotesRaw = async () => {
-  return await db.notes.orderBy('timestamp').reverse().toArray();
-};
-
+// Keep legacy deleteNote for full verse deletion (used nowhere now but kept for safety)
 export const deleteNote = async (id) => {
   return await db.notes.delete(id);
 };
+
+
 
 export const saveHistory = async (item) => {
   const existing = await db.history

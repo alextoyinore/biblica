@@ -13,7 +13,13 @@ const RichTextEditor = ({ content, onChange, placeholder }) => {
   const editorRef = useRef(null);
   const quillRef = useRef(null);
   const flyoutRef = useRef(null);
+  const onChangeRef = useRef(onChange);
   const [flyoutData, setFlyoutData] = useState(null);
+
+  // Keep the ref pointing at the latest onChange so Quill's listener never goes stale
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -57,7 +63,8 @@ const RichTextEditor = ({ content, onChange, placeholder }) => {
           }
         }
         const html = quillRef.current.root.innerHTML;
-        onChange(html);
+        // Use the ref so we always call the latest onChange (avoids stale closure)
+        onChangeRef.current(html);
       });
 
       quillRef.current.root.addEventListener('click', async (e) => {

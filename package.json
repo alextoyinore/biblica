@@ -14,7 +14,7 @@
     "lint": "echo \"No linting configured\""
   },
   "keywords": [],
-  "author": "lexxy",
+  "author": "Alexander Ore",
   "license": "MIT",
   "devDependencies": {
     "@babel/core": "^7.29.0",

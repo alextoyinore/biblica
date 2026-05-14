@@ -183,6 +183,7 @@ const createWindow = () => {
     x: windowState.x,
     y: windowState.y,
     frame: false,
+    backgroundColor: '#0a0a0b', // matches --bg-deep; prevents white 1px OS border on Linux
     icon: path.join(__dirname, 'assets', 'logo.png'),
     webPreferences: {
       preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,

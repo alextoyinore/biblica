@@ -4,13 +4,22 @@ import './LibraryPanel.css';
 const LibraryPanel = ({ isOpen, onClose, history, bookmarks, notes = {}, onDeleteNote, onSelectPassage }) => {
   if (!isOpen) return null;
 
+  // Flatten all per-verse entry arrays into a single sorted list
   const notesList = Object.entries(notes)
-    .map(([id, note]) => {
-      const parts = id.split('_');
+    .flatMap(([verseKey, entries]) => {
+      const parts = verseKey.split('_');
       const book = parts[0];
       const chapter = parts[1];
       const verse = parts[2];
-      return { id, book, chapter, verse, ...(typeof note === 'string' ? { content: note } : note) };
+      const entryArray = Array.isArray(entries) ? entries : [];
+      return entryArray.map(entry => ({
+        id: verseKey,           // used for navigation
+        noteId: entry.noteId,
+        book, chapter, verse,
+        title: entry.title,
+        content: entry.content,
+        timestamp: entry.timestamp
+      }));
     })
     .filter(n => n.content || n.title)
     .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
@@ -29,13 +38,13 @@ const LibraryPanel = ({ isOpen, onClose, history, bookmarks, notes = {}, onDelet
               <h3 className="section-label">Your Notes</h3>
               <div className="library-list">
                 {notesList.map((item) => (
-                  <div key={item.id} className="library-item-minimal note" onClick={() => onSelectPassage(item)}>
+                  <div key={item.noteId} className="library-item-minimal note" onClick={() => onSelectPassage(item)}>
                     <div className="item-meta-minimal">
                       <div className="note-header-row">
                         <span className="note-title-preview">{item.title || 'Untitled Note'}</span>
                         <button 
                           className="delete-item-btn" 
-                          onClick={(e) => { e.stopPropagation(); onDeleteNote(item.id); }}
+                          onClick={(e) => { e.stopPropagation(); onDeleteNote(item.id, item.noteId); }}
                           title="Delete Note"
                         >
                           &times;

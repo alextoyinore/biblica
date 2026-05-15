@@ -229,6 +229,25 @@ const createWindow = () => {
   // Remove default menu
   Menu.setApplicationMenu(null);
 
+  // Prevent unintended navigations (e.g. from links that escape interception)
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    if (url !== mainWindow.webContents.getURL()) {
+      event.preventDefault();
+      // Optionally open external http links in the system browser
+      if (url.startsWith('http')) {
+        shell.openExternal(url);
+      }
+    }
+  });
+
+  // Handle target="_blank" links
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (url.startsWith('http')) {
+      shell.openExternal(url);
+    }
+    return { action: 'deny' };
+  });
+
   // Window control IPCs
   ipcMain.on('window-minimize', () => {
     if (mainWindow) mainWindow.minimize();

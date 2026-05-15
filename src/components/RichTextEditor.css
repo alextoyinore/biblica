@@ -89,7 +89,7 @@
 }
 
 /* Bible Link Flyout */
-.ql-editor a[href^="#bible:"] {
+.ql-editor a[href*="bible:"] {
   color: var(--accent-gold);
   text-decoration: underline;
   text-decoration-style: dotted;

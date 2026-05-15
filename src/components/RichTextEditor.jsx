@@ -68,14 +68,15 @@ const RichTextEditor = ({ content, onChange, placeholder }) => {
       });
 
       quillRef.current.root.addEventListener('click', async (e) => {
-        let target = e.target;
-        if (target.tagName !== 'A' && target.parentElement?.tagName === 'A') {
-           target = target.parentElement;
-        }
-        if (target.tagName === 'A' && target.href.includes('#bible:')) {
+        const target = e.target.closest('a');
+        if (!target) return;
+
+        const href = target.getAttribute('href') || '';
+        if (href.includes('bible:')) {
           e.preventDefault();
           e.stopPropagation();
-          const ref = decodeURIComponent(target.href.split('#bible:')[1]);
+          
+          const ref = decodeURIComponent(href.split('bible:')[1]);
           const rect = target.getBoundingClientRect();
           
           setFlyoutData({ loading: true, x: rect.left, y: rect.bottom, ref });

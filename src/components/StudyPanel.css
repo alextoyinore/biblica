@@ -192,6 +192,7 @@
   flex-direction: column;
   padding: 20px 24px;
   overflow: hidden;
+  min-height: 0;
 }
 
 .sp-editor-footer {

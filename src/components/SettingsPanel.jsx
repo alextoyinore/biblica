@@ -82,11 +82,20 @@ const SettingsPanel = ({ settings, onUpdateSettings, onClose }) => {
       </section>
 
 
-      <section className="settings-section">
+      <section className="settings-section" style={{ marginBottom: '60px' }}>
         <h3 className="setting-label">Ambient Sound Volume ({Math.round((settings.ambientVolume ?? 0.4) * 100)}%)</h3>
         <input 
           type="range" min="0" max="1" step="0.05" 
           value={settings.ambientVolume ?? 0.4} onChange={(e) => update('ambientVolume', parseFloat(e.target.value))}
+          className="slim-slider"
+        />
+      </section>
+
+      <section className="settings-section">
+        <h3 className="setting-label">Main Audio Volume ({Math.round((settings.audioVolume ?? 1.0) * 100)}%)</h3>
+        <input 
+          type="range" min="0" max="1" step="0.05" 
+          value={settings.audioVolume ?? 1.0} onChange={(e) => update('audioVolume', parseFloat(e.target.value))}
           className="slim-slider"
         />
       </section>

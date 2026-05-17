@@ -77,12 +77,13 @@ const App = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [scripture, setScripture] = useState(null);
-  const [translation, setTranslation] = useState('kjv');
-  const [passage, setPassage] = useState({
-    book: 'Genesis',
-    chapter: 1,
-    verse: null
+  const [translation, setTranslation] = useState(() => localStorage.getItem('biblica_last_translation') || 'kjv');
+  const [passage, setPassage] = useState(() => {
+    const saved = localStorage.getItem('biblica_last_passage');
+    return saved ? JSON.parse(saved) : { book: 'Genesis', chapter: 1, verse: null };
   });
+  const [autoPlayNext, setAutoPlayNext] = useState(false);
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
 
   // User States (Persistence)
   const [history, setHistory] = useState([]);
@@ -95,7 +96,8 @@ const App = () => {
     commentaryFontSize: 1.0,
     theme: 'modern-sacred',
     highlightStyle: 'heavy',
-    ambientVolume: 0.4
+    ambientVolume: 0.4,
+    audioVolume: 1.0
   });
 
   const verseRefs = useRef({});
@@ -113,6 +115,18 @@ const App = () => {
     return () => window.removeEventListener('click', handleClickOutside);
   }, [activeVerseMenu, isMenuOpen]);
 
+  // Handle Auto-Play next chapter
+  useEffect(() => {
+    if (!loading && scripture && autoPlayNext) {
+      if (audioRef.current) {
+        setTimeout(() => {
+          audioRef.current.play();
+        }, 500);
+      }
+      setAutoPlayNext(false);
+    }
+  }, [loading, scripture, autoPlayNext]);
+
   // Initial Load
   useEffect(() => {
     const initStorage = async () => {
@@ -127,6 +141,8 @@ const App = () => {
   }, []);
 
   useEffect(() => localStorage.setItem('biblica_settings', JSON.stringify(settings)), [settings]);
+  useEffect(() => localStorage.setItem('biblica_last_passage', JSON.stringify(passage)), [passage]);
+  useEffect(() => localStorage.setItem('biblica_last_translation', translation), [translation]);
   useEffect(() => { document.body.setAttribute('data-theme', settings.theme); }, [settings.theme]);
 
   // Menu Action Handler
@@ -239,6 +255,7 @@ const App = () => {
 
   const handleDashboardNavigate = (target) => {
     if (typeof target === 'object') {
+      if (isAudioPlaying) setAutoPlayNext(true);
       setPassage(target);
     } else if (target === 'library') {
       setActivePanel('library');
@@ -255,6 +272,7 @@ const App = () => {
   };
 
   const navigateChapter = (direction) => {
+    if (isAudioPlaying) setAutoPlayNext(true);
     const bookIndex = bibleData.books.findIndex(b => b.book === passage.book);
     const currentBook = bibleData.books[bookIndex];
     if (direction === 'next') {
@@ -334,6 +352,10 @@ const App = () => {
   const handleVerseTextClick = (e, v) => {
     e.stopPropagation();
     e.preventDefault();
+    if (isAudioPlaying && audioRef.current) {
+      audioRef.current.playFromVerse(parseInt(v.verse));
+      return;
+    }
     const rect = e.currentTarget.getBoundingClientRect();
     setActiveVerseMenu({ verse: v, x: rect.left, y: rect.top - 185 });
   };
@@ -418,7 +440,7 @@ const App = () => {
             <h1 style={{ fontSize: '0.7rem', color: 'var(--accent-gold)', letterSpacing: '4px', fontWeight: '800' }}>BIBLICA</h1>
           </div>
           <div style={{ flex: 1, overflow: 'hidden' }}>
-            <PassagePickerInline currentPassage={passage} onSelect={(p) => { setPassage(p); setIsSidebarOpen(false); setIsSettingsOpen(false); }} />
+            <PassagePickerInline currentPassage={passage} onSelect={(p) => { if (isAudioPlaying) setAutoPlayNext(true); setPassage(p); setIsSidebarOpen(false); setIsSettingsOpen(false); }} />
           </div>
         </div>
       </aside>
@@ -447,7 +469,18 @@ const App = () => {
 
             {/* CENTER: Audio Player */}
             <div style={{ display: 'flex', justifyContent: 'center' }}>
-              <AudioController ref={audioRef} scripture={scripture} ambientVolume={settings.ambientVolume ?? 0.4} apiKey={settings.audioApiKey} />
+              <AudioController 
+                ref={audioRef} 
+                scripture={scripture} 
+                ambientVolume={settings.ambientVolume ?? 0.4} 
+                audioVolume={settings.audioVolume ?? 1.0}
+                apiKey={settings.audioApiKey} 
+                onPlayStateChange={setIsAudioPlaying}
+                onAudioEnd={() => {
+                  setAutoPlayNext(true);
+                  navigateChapter('next');
+                }}
+              />
             </div>
 
             {/* RIGHT: Menu Trigger */}
@@ -547,13 +580,14 @@ const App = () => {
           notes={notes}
           onDeleteNote={(verseKey, noteId) => removeNoteEntry(verseKey, noteId)}
           onSelectPassage={(p) => { 
+            if (isAudioPlaying) setAutoPlayNext(true);
             setPassage(p); 
             setTranslation(p.translation || translation); 
             setActivePanel(null); 
             setIsSettingsOpen(false); 
           }} 
         />
-        <ReadingPlanPanel isOpen={activePanel === 'plans'} onClose={() => setActivePanel(null)} onNavigate={(p) => { setPassage(p); setActivePanel(null); setIsSettingsOpen(false); }} />
+        <ReadingPlanPanel isOpen={activePanel === 'plans'} onClose={() => setActivePanel(null)} onNavigate={(p) => { if (isAudioPlaying) setAutoPlayNext(true); setPassage(p); setActivePanel(null); setIsSettingsOpen(false); }} />
         <PrayerPanel isOpen={activePanel === 'prayer'} onClose={() => setActivePanel(null)} />
       </main>
 

@@ -129,20 +129,46 @@ const AMBIENT_SOUNDS = [
   { id: 'forest', name: 'Forest' },
 ];
 
-const AudioController = forwardRef(({ scripture, ambientVolume = 0.4, apiKey }, ref) => {
+const AudioController = forwardRef(({ scripture, ambientVolume = 0.4, audioVolume = 1.0, apiKey, onAudioEnd, onPlayStateChange }, ref) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isAmbientPlaying, setIsAmbientPlaying] = useState(false);
   const [ambientSound, setAmbientSound] = useState(AMBIENT_SOUNDS[0]);
   const [speed, setSpeed] = useState(0.9);
   const [isBuffering, setIsBuffering] = useState(false);
   const engineRef = useRef(new AmbientEngine());
+  const isCancellingRef = useRef(false);
 
-  // Expose togglePlay to parent components
+  // Notify parent of play state changes
+  useEffect(() => {
+    if (onPlayStateChange) onPlayStateChange(isPlaying);
+  }, [isPlaying, onPlayStateChange]);
+
+  // Expose methods to parent components
   useImperativeHandle(ref, () => ({
     togglePlay: () => {
       handleTogglePlay();
+    },
+    play: () => {
+      if (!isPlaying) handleTogglePlay();
+    },
+    playFromVerse: (verseNum) => {
+      isCancellingRef.current = true;
+      window.speechSynthesis.cancel();
+      isCancellingRef.current = false;
+      setIsPlaying(false);
+      setTimeout(() => {
+        handleTogglePlay(verseNum);
+      }, 50);
     }
   }));
+
+  // Cancel speech if scripture changes
+  useEffect(() => {
+    isCancellingRef.current = true;
+    window.speechSynthesis.cancel();
+    isCancellingRef.current = false;
+    setIsPlaying(false);
+  }, [scripture]);
 
   // Sync volume changes to the running engine
   useEffect(() => {
@@ -153,14 +179,14 @@ const AudioController = forwardRef(({ scripture, ambientVolume = 0.4, apiKey }, 
 
 
 
-  const handleTogglePlay = async () => {
-    if (isPlaying) {
+  const handleTogglePlay = async (startVerse = 1) => {
+    if (isPlaying && startVerse === 1) {
       window.speechSynthesis.pause();
       setIsPlaying(false);
       return;
     }
     
-    if (window.speechSynthesis.paused && window.speechSynthesis.speaking) {
+    if (window.speechSynthesis.paused && window.speechSynthesis.speaking && startVerse === 1) {
       window.speechSynthesis.resume();
       setIsPlaying(true);
       return;
@@ -170,21 +196,29 @@ const AudioController = forwardRef(({ scripture, ambientVolume = 0.4, apiKey }, 
     
     setIsBuffering(false);
     
-    const fullText = scripture.verses.map(v => v.text).join(' ');
+    const versesToPlay = scripture.verses.filter(v => parseInt(v.verse) >= startVerse);
+    const fullText = versesToPlay.map(v => v.text.replace(/\{[^}]+\}/g, '').trim()).join(' ');
     const utterance = new SpeechSynthesisUtterance(fullText);
     utterance.rate = speed;
+    utterance.volume = audioVolume;
     
     const voices = window.speechSynthesis.getVoices();
     const preferredVoice = voices.find(v => v.name.includes('Google UK English Male')) || voices[0];
     if (preferredVoice) utterance.voice = preferredVoice;
 
-    utterance.onend = () => setIsPlaying(false);
+    utterance.onend = (e) => {
+      if (isCancellingRef.current) return;
+      setIsPlaying(false);
+      if (onAudioEnd) onAudioEnd();
+    };
     utterance.onerror = (e) => {
       console.warn('Speech synthesis error', e);
       setIsPlaying(false);
     };
 
+    isCancellingRef.current = true;
     window.speechSynthesis.cancel();
+    isCancellingRef.current = false;
     window.speechSynthesis.speak(utterance);
     setIsPlaying(true);
   };
@@ -211,6 +245,7 @@ const AudioController = forwardRef(({ scripture, ambientVolume = 0.4, apiKey }, 
 
   useEffect(() => {
     return () => {
+      isCancellingRef.current = true;
       window.speechSynthesis.cancel();
       engineRef.current.stop();
     };
@@ -221,7 +256,7 @@ const AudioController = forwardRef(({ scripture, ambientVolume = 0.4, apiKey }, 
       <div className="player-main">
         <button
           className={`play-btn ${isPlaying ? 'playing' : ''}`}
-          onClick={handleTogglePlay}
+          onClick={() => handleTogglePlay(1)}
           title={isPlaying ? 'Pause Reading' : 'Read Chapter'}
         >
           {isPlaying ? '⏸' : '▶'}

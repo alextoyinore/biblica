@@ -11,7 +11,9 @@ module.exports = {
   makers: [
     {
       name: '@electron-forge/maker-squirrel',
-      config: {},
+      config: {
+        setupIcon: './src/assets/logo.ico'
+      },
     },
     {
       name: '@electron-forge/maker-zip',
@@ -19,7 +21,11 @@ module.exports = {
     },
     {
       name: '@electron-forge/maker-deb',
-      config: {},
+      config: {
+        options: {
+          icon: './src/assets/logo.png'
+        }
+      },
     },
   ],
   plugins: [

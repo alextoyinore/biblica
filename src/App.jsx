@@ -480,6 +480,11 @@ const App = () => {
                   setAutoPlayNext(true);
                   navigateChapter('next');
                 }}
+                onActiveVerseChange={(verseNum) => {
+                  if (verseRefs.current[verseNum]) {
+                    verseRefs.current[verseNum].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }
+                }}
               />
             </div>
 

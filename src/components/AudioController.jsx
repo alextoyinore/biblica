@@ -129,7 +129,7 @@ const AMBIENT_SOUNDS = [
   { id: 'forest', name: 'Forest' },
 ];
 
-const AudioController = forwardRef(({ scripture, ambientVolume = 0.4, audioVolume = 1.0, apiKey, onAudioEnd, onPlayStateChange }, ref) => {
+const AudioController = forwardRef(({ scripture, ambientVolume = 0.4, audioVolume = 1.0, apiKey, onAudioEnd, onPlayStateChange, onActiveVerseChange }, ref) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isAmbientPlaying, setIsAmbientPlaying] = useState(false);
   const [ambientSound, setAmbientSound] = useState(AMBIENT_SOUNDS[0]);
@@ -197,7 +197,17 @@ const AudioController = forwardRef(({ scripture, ambientVolume = 0.4, audioVolum
     setIsBuffering(false);
     
     const versesToPlay = scripture.verses.filter(v => parseInt(v.verse) >= startVerse);
-    const fullText = versesToPlay.map(v => v.text.replace(/\{[^}]+\}/g, '').trim()).join(' ');
+    let verseIndexMap = [];
+    let currentLength = 0;
+    
+    const fullText = versesToPlay.map(v => {
+      const cleanText = v.text.replace(/\{[^}]+\}/g, '').trim();
+      const length = cleanText.length;
+      verseIndexMap.push({ verseNum: parseInt(v.verse), start: currentLength, end: currentLength + length });
+      currentLength += length + 1; // +1 for the space from join(' ')
+      return cleanText;
+    }).join(' ');
+
     const utterance = new SpeechSynthesisUtterance(fullText);
     utterance.rate = speed;
     utterance.volume = audioVolume;
@@ -205,6 +215,18 @@ const AudioController = forwardRef(({ scripture, ambientVolume = 0.4, audioVolum
     const voices = window.speechSynthesis.getVoices();
     const preferredVoice = voices.find(v => v.name.includes('Google UK English Male')) || voices[0];
     if (preferredVoice) utterance.voice = preferredVoice;
+
+    let currentActiveVerse = null;
+    utterance.onboundary = (e) => {
+      if (e.name === 'word' || e.name === 'sentence') {
+        const charIndex = e.charIndex;
+        const currentVerseObj = verseIndexMap.find(v => charIndex >= v.start && charIndex <= v.end);
+        if (currentVerseObj && currentActiveVerse !== currentVerseObj.verseNum) {
+           currentActiveVerse = currentVerseObj.verseNum;
+           if (onActiveVerseChange) onActiveVerseChange(currentActiveVerse);
+        }
+      }
+    };
 
     utterance.onend = (e) => {
       if (isCancellingRef.current) return;
